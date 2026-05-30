@@ -256,18 +256,6 @@ Development still required strong understanding of:
 * Event Notifications
 * Family Group Integration
 
-### 📊 Advanced Analytics
-
-* Family Growth Trends
-* Occupation Analytics
-* Generation Analysis
-
-### 📸 Enhanced Gallery
-
-* Albums
-* Family Collections
-* Memory Categories
-
 ### ☁️ Cloud Deployment
 
 * Production Hosting
