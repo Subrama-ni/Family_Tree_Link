@@ -1,0 +1,29 @@
+# Node
+node_modules/
+dist/
+
+# React
+.vite/
+.env
+
+# Java
+target/
+*.class
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Uploads
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
