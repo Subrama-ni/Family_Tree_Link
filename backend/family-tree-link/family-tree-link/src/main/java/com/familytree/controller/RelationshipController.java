@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.familytree.entity.Relationship;
 import com.familytree.service.RelationshipService;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/relationships")
 public class RelationshipController {
@@ -28,13 +27,26 @@ public class RelationshipController {
         this.service = service;
     }
 
+    /*
+     * ============================================================
+     * ADD RELATIONSHIP
+     * ============================================================
+     */
+
     @PostMapping
     public Relationship addRelationship(
             @RequestBody Relationship relationship) {
 
         return service.addRelationship(
-                relationship);
+                relationship
+        );
     }
+
+    /*
+     * ============================================================
+     * GET CURRENT FAMILY RELATIONSHIPS
+     * ============================================================
+     */
 
     @GetMapping
     public List<Relationship>
@@ -42,20 +54,34 @@ public class RelationshipController {
 
         return service.getAllRelationships();
     }
+
+    /*
+     * ============================================================
+     * UPDATE RELATIONSHIP
+     * ============================================================
+     */
+
     @PutMapping("/{id}")
-public Relationship updateRelationship(
-        @PathVariable Long id,
-        @RequestBody Relationship relationship) {
+    public Relationship updateRelationship(
+            @PathVariable Long id,
+            @RequestBody Relationship relationship) {
 
-    return service.updateRelationship(
-            id,
-            relationship);
-}
+        return service.updateRelationship(
+                id,
+                relationship
+        );
+    }
 
-@DeleteMapping("/{id}")
-public void deleteRelationship(
-        @PathVariable Long id) {
+    /*
+     * ============================================================
+     * DELETE RELATIONSHIP
+     * ============================================================
+     */
 
-    service.deleteRelationship(id);
-}
+    @DeleteMapping("/{id}")
+    public void deleteRelationship(
+            @PathVariable Long id) {
+
+        service.deleteRelationship(id);
+    }
 }

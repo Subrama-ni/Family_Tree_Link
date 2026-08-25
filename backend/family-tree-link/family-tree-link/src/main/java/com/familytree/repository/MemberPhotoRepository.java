@@ -11,5 +11,23 @@ public interface MemberPhotoRepository
 
     List<MemberPhoto>
     findByFamilyMemberId(
-            Long memberId);
+            Long memberId
+    );
+
+    List<MemberPhoto>
+    findByFamilyMember_Family_Id(
+            Long familyId
+    );
+
+    List<MemberPhoto>
+    findByFamilyMember_Family_IdAndCategory(
+            Long familyId,
+            String category
+    );
+
+    List<MemberPhoto>
+    findByFamilyMember_Family_IdAndId(
+            Long familyId,
+            Long id
+    );
 }

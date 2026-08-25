@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+
+import api from "../services/api";
+
 function MembersPage() {
-  const [members, setMembers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [genderFilter, setGenderFilter] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [editingMember, setEditingMember] = useState(null);
-  const [editFile, setEditFile] = useState(null);
   const navigate = useNavigate();
-  const [editData, setEditData] = useState({
-    fullName: "",
-    gender: "",
-    dateOfBirth: "",
-    biography: "",
-    occupation: "",
-  });
+
+  const [members, setMembers] = useState([]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [genderFilter, setGenderFilter] = useState("");
+
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const [editingMember, setEditingMember] = useState(null);
+
+  const [editFile, setEditFile] = useState(null);
+
+  const [loading, setLoading] = useState(true);
+
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -26,7 +33,19 @@ function MembersPage() {
     imagePath: "",
   });
 
-  const API_URL = "http://localhost:8080/api/members";
+  const [editData, setEditData] = useState({
+    fullName: "",
+    gender: "",
+    dateOfBirth: "",
+    biography: "",
+    occupation: "",
+  });
+
+  /*
+   * ============================================================
+   * FETCH MEMBERS
+   * ============================================================
+   */
 
   useEffect(() => {
     fetchMembers();
@@ -34,48 +53,91 @@ function MembersPage() {
 
   const fetchMembers = async () => {
     try {
-      const response = await axios.get(API_URL);
+      setLoading(true);
+
+      setError("");
+
+      const response = await api.get("/api/members");
 
       setMembers(response.data);
     } catch (error) {
-      console.log(error);
+      console.error("Error loading members:", error);
+
+      setError("Unable to load family members.");
+    } finally {
+      setLoading(false);
     }
   };
+
+  /*
+   * ============================================================
+   * FORM CHANGE
+   * ============================================================
+   */
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-
       [e.target.name]: e.target.value,
     });
   };
 
+  /*
+   * ============================================================
+   * ADD MEMBER
+   * ============================================================
+   */
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.fullName.trim()) {
+      alert("Please enter the member's name.");
+
+      return;
+    }
+
     try {
+      setSaving(true);
+
       let uploadedImagePath = "";
+
+      /*
+       * Upload image first.
+       */
 
       if (selectedFile) {
         const imageData = new FormData();
 
         imageData.append("file", selectedFile);
 
-        const uploadResponse = await axios.post(
-          "http://localhost:8080/api/members/upload",
-          imageData,
-        );
+        const uploadResponse = await api.post("/api/members/upload", imageData);
 
         uploadedImagePath = uploadResponse.data;
       }
 
-      await axios.post(API_URL, {
+      /*
+       * Create member.
+       *
+       * IMPORTANT:
+       *
+       * We do NOT send family.
+       *
+       * Backend assigns the current
+       * user's family.
+       */
+
+      await api.post("/api/members", {
         ...formData,
 
         imagePath: uploadedImagePath,
       });
 
-      alert("Member Added Successfully");
+      alert("Member added successfully.");
+
+      /*
+       * Reset form.
+       */
 
       setFormData({
         fullName: "",
@@ -86,90 +148,236 @@ function MembersPage() {
         imagePath: "",
       });
 
-      fetchMembers();
+      setSelectedFile(null);
+
+      /*
+       * Reset file input.
+       */
+
+      const fileInput = document.getElementById("member-image");
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      /*
+       * Refresh members.
+       */
+
+      await fetchMembers();
     } catch (error) {
-      console.log(error);
+      console.error("Error adding member:", error);
+
+      alert(error.response?.data?.message || "Unable to add member.");
+    } finally {
+      setSaving(false);
     }
   };
+
+  /*
+   * ============================================================
+   * START EDIT
+   * ============================================================
+   */
+
   const startEdit = (member) => {
     setEditingMember(member);
 
     setEditData({
-      fullName: member.fullName,
-      gender: member.gender,
-      dateOfBirth: member.dateOfBirth,
-      biography: member.biography,
-      occupation: member.occupation,
+      fullName: member.fullName || "",
+
+      gender: member.gender || "",
+
+      dateOfBirth: member.dateOfBirth || "",
+
+      biography: member.biography || "",
+
+      occupation: member.occupation || "",
     });
+
+    setEditFile(null);
   };
+
+  /*
+   * ============================================================
+   * UPDATE MEMBER
+   * ============================================================
+   */
+
   const updateMember = async () => {
+    if (!editingMember) {
+      return;
+    }
+
     try {
-      let uploadedImagePath = editingMember.imagePath;
+      setSaving(true);
+
+      let uploadedImagePath = editingMember.imagePath || "";
+
+      /*
+       * Upload new image only if
+       * user selected one.
+       */
 
       if (editFile) {
         const imageData = new FormData();
 
         imageData.append("file", editFile);
 
-        const uploadResponse = await axios.post(
-          "http://localhost:8080/api/members/upload",
-          imageData,
-        );
+        const uploadResponse = await api.post("/api/members/upload", imageData);
 
         uploadedImagePath = uploadResponse.data;
       }
 
-      await axios.put(`${API_URL}/${editingMember.id}`, {
+      /*
+       * Update member.
+       *
+       * Family is NOT sent.
+       *
+       * Backend protects family ownership.
+       */
+
+      await api.put(`/api/members/${editingMember.id}`, {
         ...editData,
 
         imagePath: uploadedImagePath,
       });
 
-      alert("Member Updated Successfully");
+      alert("Member updated successfully.");
 
       setEditingMember(null);
 
       setEditFile(null);
 
-      fetchMembers();
+      await fetchMembers();
     } catch (error) {
-      console.log(error);
+      console.error("Error updating member:", error);
+
+      alert(error.response?.data?.message || "Unable to update member.");
+    } finally {
+      setSaving(false);
     }
   };
+
+  /*
+   * ============================================================
+   * DELETE MEMBER
+   * ============================================================
+   */
 
   const deleteMember = async (id) => {
-    if (!window.confirm("Delete this member?")) return;
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this family member?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
 
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await api.delete(`/api/members/${id}`);
 
-      fetchMembers();
+      await fetchMembers();
     } catch (error) {
-      console.log(error);
+      console.error("Error deleting member:", error);
+
+      alert(error.response?.data?.message || "Unable to delete member.");
     }
   };
 
+  /*
+   * ============================================================
+   * FILTER MEMBERS
+   * ============================================================
+   */
+
   const filteredMembers = members.filter((member) => {
-    const matchesSearch = member.fullName
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const name = member.fullName || "";
+
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesGender = genderFilter === "" || member.gender === genderFilter;
 
     return matchesSearch && matchesGender;
   });
 
+  /*
+   * ============================================================
+   * LOADING STATE
+   * ============================================================
+   */
+
+  if (loading) {
+    return (
+      <div className="members-page">
+        <div className="members-loading">
+          <div className="loading-spinner"></div>
+
+          <h2>Loading Family Members...</h2>
+
+          <p>Please wait while we load your family workspace.</p>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * ============================================================
+   * PAGE
+   * ============================================================
+   */
+
   return (
     <div className="members-page">
-      <h1>Manage Family Members</h1>
+      {/* ======================================================
+          HEADER
+      ======================================================= */}
 
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search Member..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="members-header">
+        <div>
+          <span className="members-eyebrow">FAMILY DIRECTORY</span>
+
+          <h1>Manage Family Members</h1>
+
+          <p>Add, manage and explore the people who make your family unique.</p>
+        </div>
+
+        <div className="member-count">
+          <strong>{members.length}</strong>
+
+          <span>Members</span>
+        </div>
+      </div>
+
+      {/* ======================================================
+          ERROR
+      ======================================================= */}
+
+      {error && (
+        <div className="members-error">
+          <strong>Something went wrong</strong>
+
+          <p>{error}</p>
+
+          <button onClick={fetchMembers}>Try Again</button>
+        </div>
+      )}
+
+      {/* ======================================================
+          SEARCH + FILTER
+      ======================================================= */}
+
+      <div className="members-toolbar">
+        <div className="search-wrapper">
+          <span>🔍</span>
+
+          <input
+            type="text"
+            placeholder="Search family members..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
         <select
           value={genderFilter}
@@ -183,26 +391,53 @@ function MembersPage() {
         </select>
       </div>
 
+      {/* ======================================================
+          MAIN CONTENT
+      ======================================================= */}
+
       <div className="member-layout">
+        {/* ====================================================
+            ADD MEMBER
+        ===================================================== */}
+
         <div className="member-form">
-          <h2>Add New Member</h2>
+          <div className="form-header">
+            <span className="form-icon">👤</span>
+
+            <div>
+              <h2>Add New Member</h2>
+
+              <p>Add someone to your family tree.</p>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit}>
+            <label>Full Name</label>
+
             <input
               type="text"
               name="fullName"
-              placeholder="Full Name"
+              placeholder="Enter full name"
               value={formData.fullName}
               onChange={handleChange}
+              required
             />
 
-            <input
-              type="text"
+            <label>Gender</label>
+
+            <select
               name="gender"
-              placeholder="Gender"
               value={formData.gender}
               onChange={handleChange}
-            />
+            >
+              <option value="">Select Gender</option>
+
+              <option value="Male">Male</option>
+
+              <option value="Female">Female</option>
+            </select>
+
+            <label>Date of Birth</label>
 
             <input
               type="date"
@@ -211,148 +446,266 @@ function MembersPage() {
               onChange={handleChange}
             />
 
+            <label>Biography</label>
+
             <textarea
               name="biography"
-              placeholder="Biography"
+              placeholder="Tell us about this family member..."
               value={formData.biography}
               onChange={handleChange}
+              rows="4"
             />
+
+            <label>Occupation</label>
 
             <input
               type="text"
               name="occupation"
-              placeholder="Occupation"
+              placeholder="e.g. Teacher, Engineer"
               value={formData.occupation}
               onChange={handleChange}
             />
 
+            <label>Profile Photo</label>
+
             <input
+              id="member-image"
               type="file"
+              accept="image/*"
               onChange={(e) => setSelectedFile(e.target.files[0])}
             />
 
-            <button type="submit">Add Member</button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="add-member-button"
+            >
+              {saving ? "Adding Member..." : "＋ Add Member"}
+            </button>
           </form>
         </div>
 
-        <div className="member-grid">
-          {filteredMembers.map((member) => (
-            <div key={member.id} className="member-card">
-              <img
-                src={`http://localhost:8080/uploads/${member.imagePath}`}
-                alt="member"
-              />
+        {/* ====================================================
+            MEMBER GRID
+        ===================================================== */}
 
-              <h3>{member.fullName}</h3>
+        <div className="member-section">
+          <div className="member-section-header">
+            <div>
+              <span>YOUR FAMILY</span>
 
-              <p>{member.occupation}</p>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginTop: "15px",
-                }}
-              >
-                <button onClick={() => navigate(`/member/${member.id}`)}>
-                  View Profile
-                </button>
-                <button onClick={() => startEdit(member)}>Edit</button>
-
-                <button onClick={() => deleteMember(member.id)}>Delete</button>
-              </div>
+              <h2>Family Members</h2>
             </div>
-          ))}
-          {editingMember && (
-            <div className="edit-modal">
-              <div className="edit-content">
-                <h2>Edit Member</h2>
-                <img
-                  src={`http://localhost:8080/uploads/${editingMember.imagePath}`}
-                  alt="member"
-                  style={{
-                    width: "150px",
-                    height: "150px",
-                    objectFit: "cover",
-                    borderRadius: "15px",
-                    marginBottom: "15px",
-                  }}
-                />
-                <input
-                  type="file"
-                  onChange={(e) => setEditFile(e.target.files[0])}
-                />
 
-                <input
-                  type="text"
-                  value={editData.fullName}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      fullName: e.target.value,
-                    })
-                  }
-                />
+            <p>
+              {filteredMembers.length} result
+              {filteredMembers.length !== 1 ? "s" : ""}
+            </p>
+          </div>
 
-                <input
-                  type="text"
-                  value={editData.gender}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      gender: e.target.value,
-                    })
-                  }
-                />
+          {filteredMembers.length === 0 ? (
+            <div className="empty-members">
+              <div className="empty-icon">👨‍👩‍👧‍👦</div>
 
-                <input
-                  type="date"
-                  value={editData.dateOfBirth}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      dateOfBirth: e.target.value,
-                    })
-                  }
-                />
+              <h2>No members found</h2>
 
-                <textarea
-                  value={editData.biography}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      biography: e.target.value,
-                    })
-                  }
-                />
+              <p>Try changing your search or add a new family member.</p>
+            </div>
+          ) : (
+            <div className="member-grid">
+              {filteredMembers.map((member) => (
+                <div key={member.id} className="member-card">
+                  <div className="member-image-wrapper">
+                    {member.imagePath ? (
+                      <img
+                        src={`http://localhost:8080/uploads/${member.imagePath}`}
+                        alt={member.fullName}
+                      />
+                    ) : (
+                      <div className="member-placeholder">
+                        {member.fullName?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
 
-                <input
-                  type="text"
-                  value={editData.occupation}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      occupation: e.target.value,
-                    })
-                  }
-                />
+                  <div className="member-card-body">
+                    <h3>{member.fullName}</h3>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "15px",
-                    marginTop: "20px",
-                  }}
-                >
-                  <button onClick={updateMember}>Save</button>
+                    <p className="member-occupation">
+                      {member.occupation || "Family Member"}
+                    </p>
 
-                  <button onClick={() => setEditingMember(null)}>Cancel</button>
+                    <div className="member-meta">
+                      {member.gender && <span>{member.gender}</span>}
+
+                      {member.dateOfBirth && <span>{member.dateOfBirth}</span>}
+                    </div>
+
+                    <div className="member-actions">
+                      <button
+                        className="view-button"
+                        onClick={() => navigate(`/member/${member.id}`)}
+                      >
+                        View Profile
+                      </button>
+
+                      <button
+                        className="edit-button"
+                        onClick={() => startEdit(member)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="delete-button"
+                        onClick={() => deleteMember(member.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* ======================================================
+          EDIT MODAL
+      ======================================================= */}
+
+      {editingMember && (
+        <div className="edit-modal">
+          <div className="edit-content">
+            <div className="edit-header">
+              <div>
+                <span>FAMILY MEMBER</span>
+
+                <h2>Edit Member</h2>
+              </div>
+
+              <button
+                className="close-modal"
+                onClick={() => setEditingMember(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* PHOTO */}
+
+            <div className="edit-photo">
+              {editingMember.imagePath ? (
+                <img
+                  src={`http://localhost:8080/uploads/${editingMember.imagePath}`}
+                  alt={editingMember.fullName}
+                />
+              ) : (
+                <div className="edit-placeholder">
+                  {editingMember.fullName?.charAt(0)?.toUpperCase() || "?"}
+                </div>
+              )}
+            </div>
+
+            <label>Change Photo</label>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setEditFile(e.target.files[0])}
+            />
+
+            <label>Full Name</label>
+
+            <input
+              type="text"
+              value={editData.fullName}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  fullName: e.target.value,
+                })
+              }
+            />
+
+            <label>Gender</label>
+
+            <select
+              value={editData.gender}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  gender: e.target.value,
+                })
+              }
+            >
+              <option value="">Select Gender</option>
+
+              <option value="Male">Male</option>
+
+              <option value="Female">Female</option>
+            </select>
+
+            <label>Date of Birth</label>
+
+            <input
+              type="date"
+              value={editData.dateOfBirth || ""}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  dateOfBirth: e.target.value,
+                })
+              }
+            />
+
+            <label>Biography</label>
+
+            <textarea
+              value={editData.biography}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  biography: e.target.value,
+                })
+              }
+              rows="4"
+            />
+
+            <label>Occupation</label>
+
+            <input
+              type="text"
+              value={editData.occupation}
+              onChange={(e) =>
+                setEditData({
+                  ...editData,
+                  occupation: e.target.value,
+                })
+              }
+            />
+
+            <div className="edit-actions">
+              <button
+                className="cancel-button"
+                onClick={() => setEditingMember(null)}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="save-button"
+                onClick={updateMember}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

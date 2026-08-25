@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,8 +20,6 @@ import com.familytree.service.MemberPhotoService;
 
 @RestController
 @RequestMapping("/api/photos")
-@CrossOrigin(origins =
-        "http://localhost:5173")
 public class MemberPhotoController {
 
     private final MemberPhotoService service;
@@ -33,65 +30,112 @@ public class MemberPhotoController {
         this.service = service;
     }
 
+    /*
+     * ============================================================
+     * ADD PHOTO RECORD
+     * ============================================================
+     */
+
     @PostMapping
     public MemberPhoto addPhoto(
             @RequestBody MemberPhoto photo) {
 
         return service.addPhoto(photo);
     }
+
+    /*
+     * ============================================================
+     * UPLOAD IMAGE
+     * ============================================================
+     */
+
     @PostMapping("/upload")
-public String uploadPhoto(
+    public String uploadPhoto(
+            @RequestParam("file")
+            MultipartFile file,
 
-        @RequestParam("file")
-        MultipartFile file)
+            @RequestParam("memberId")
+            Long memberId)
+            throws IOException {
 
-        throws IOException {
+        /*
+         * This validates that the selected member
+         * belongs to the logged-in user's family.
+         */
+        service.getPhotosByMember(memberId);
 
-    String uploadDir =
-            System.getProperty("user.dir")
-            + "/uploads/";
+        if (file == null
+                || file.isEmpty()) {
 
-    File directory =
-            new File(uploadDir);
+            throw new IllegalArgumentException(
+                    "Image file is required"
+            );
+        }
 
-    if (!directory.exists()) {
+        String uploadDir =
+                System.getProperty("user.dir")
+                        + "/uploads/";
 
-        directory.mkdirs();
+        File directory =
+                new File(uploadDir);
+
+        if (!directory.exists()) {
+
+            directory.mkdirs();
+        }
+
+        String originalFileName =
+                file.getOriginalFilename();
+
+        String fileName =
+                System.currentTimeMillis()
+                        + "_"
+                        + originalFileName;
+
+        File destination =
+                new File(
+                        uploadDir + fileName
+                );
+
+        file.transferTo(destination);
+
+        return fileName;
     }
 
-    String fileName =
-            System.currentTimeMillis()
-            + "_"
-            + file.getOriginalFilename();
+    /*
+     * ============================================================
+     * UPDATE PHOTO
+     * ============================================================
+     */
 
-    file.transferTo(
+    @PutMapping("/{id}")
+    public MemberPhoto updatePhoto(
+            @PathVariable Long id,
+            @RequestBody MemberPhoto photo) {
 
-            new File(
-                    uploadDir
-                    + fileName)
+        return service.updatePhoto(
+                id,
+                photo
+        );
+    }
 
-    );
-
-    return fileName;
-}
-@PutMapping("/{id}")
-public MemberPhoto updatePhoto(
-
-        @PathVariable Long id,
-
-        @RequestBody
-        MemberPhoto photo) {
-
-    return service.updatePhoto(
-            id,
-            photo);
-}
+    /*
+     * ============================================================
+     * GET ALL PHOTOS
+     * ============================================================
+     */
 
     @GetMapping
     public List<MemberPhoto> getAllPhotos() {
 
         return service.getAllPhotos();
     }
+
+    /*
+     * ============================================================
+     * GET PHOTOS BY MEMBER
+     * ============================================================
+     */
 
     @GetMapping("/member/{id}")
     public List<MemberPhoto>
@@ -100,6 +144,12 @@ public MemberPhoto updatePhoto(
 
         return service.getPhotosByMember(id);
     }
+
+    /*
+     * ============================================================
+     * DELETE PHOTO
+     * ============================================================
+     */
 
     @DeleteMapping("/{id}")
     public void deletePhoto(

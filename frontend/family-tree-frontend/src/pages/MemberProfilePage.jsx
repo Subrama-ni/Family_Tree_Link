@@ -1,142 +1,215 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
-import { useParams } from "react-router-dom";
-
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 function MemberProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [member, setMember] = useState(null);
   const [relationships, setRelationships] = useState([]);
-
   const [events, setEvents] = useState([]);
+
+  const memberId = parseInt(id);
 
   useEffect(() => {
     fetchMember();
     fetchEvents();
     fetchRelationships();
-  }, []);
+  }, [id]);
+
+  /*
+   * ============================================================
+   * FETCH MEMBER
+   * ============================================================
+   */
 
   const fetchMember = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:8080/api/members/${id}`,
-      );
+      const response = await api.get(`/api/members/${id}`);
 
       setMember(response.data);
     } catch (error) {
-      console.log(error);
+      console.error("Unable to load member:", error);
     }
   };
 
+  /*
+   * ============================================================
+   * FETCH LIFE EVENTS
+   * ============================================================
+   */
+
   const fetchEvents = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/events");
+      const response = await api.get("/api/events");
 
       const memberEvents = response.data.filter(
-        (event) => event.familyMember?.id === parseInt(id),
+        (event) => event.familyMember?.id === memberId,
       );
 
       setEvents(memberEvents);
     } catch (error) {
-      console.log(error);
+      console.error("Unable to load events:", error);
     }
   };
+
+  /*
+   * ============================================================
+   * FETCH RELATIONSHIPS
+   * ============================================================
+   */
+
   const fetchRelationships = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:8080/api/relationships",
-      );
+      const response = await api.get("/api/relationships");
 
       setRelationships(response.data);
     } catch (error) {
-      console.log(error);
+      console.error("Unable to load relationships:", error);
     }
   };
 
+  /*
+   * ============================================================
+   * LOADING STATE
+   * ============================================================
+   */
+
   if (!member) {
-    return <h2>Loading...</h2>;
+    return <div className="profile-loading">Loading member profile...</div>;
   }
+
+  /*
+   * ============================================================
+   * FILTER RELATIONSHIPS FOR THIS MEMBER
+   * ============================================================
+   */
+
   const memberRelationships = relationships.filter(
     (relation) =>
-      relation.memberOne?.id === parseInt(id) ||
-      relation.memberTwo?.id === parseInt(id),
+      relation.memberOne?.id === memberId ||
+      relation.memberTwo?.id === memberId,
   );
 
   return (
-    <div className="profile-page">
+    <div className="member-profile-page">
+      {/* =====================================================
+          PROFILE HEADER
+          ===================================================== */}
+
       <div className="profile-header">
         <img
-          src={`http://localhost:8080/uploads/${member.imagePath}`}
-          alt="member"
+          src={
+            member.imagePath
+              ? `http://localhost:8080/uploads/${member.imagePath}`
+              : "/default-profile.png"
+          }
+          alt={member.fullName}
           className="profile-image"
         />
 
-        <div>
+        <div className="profile-main-info">
           <h1>{member.fullName}</h1>
 
-          <h3>{member.occupation}</h3>
+          <h3>{member.occupation || "Occupation not provided"}</h3>
 
-          <p>{member.gender}</p>
+          <p>
+            <strong>Gender:</strong> {member.gender || "Not provided"}
+          </p>
 
-          <p>{member.dateOfBirth}</p>
+          <p>
+            <strong>Date of Birth:</strong>{" "}
+            {member.dateOfBirth || "Not provided"}
+          </p>
         </div>
       </div>
+
+      {/* =====================================================
+          BIOGRAPHY
+          ===================================================== */}
 
       <div className="profile-section">
         <h2>Biography</h2>
 
-        <p>{member.biography}</p>
+        <p>{member.biography || "No biography has been added yet."}</p>
       </div>
+
+      {/* =====================================================
+          LIFE TIMELINE
+          ===================================================== */}
 
       <div className="profile-section">
         <h2>Life Timeline</h2>
 
-        {events.map((event) => (
-          <div key={event.id} className="timeline-item">
-            <h3>{event.title}</h3>
+        {events.length === 0 ? (
+          <p>No life events have been recorded yet.</p>
+        ) : (
+          <div className="timeline-list">
+            {events.map((event) => (
+              <div key={event.id} className="timeline-item">
+                <h3>{event.title}</h3>
 
-            <p>{event.eventDate}</p>
+                <p>
+                  <strong>{event.eventDate}</strong>
+                </p>
 
-            <p>{event.description}</p>
+                <p>{event.description}</p>
+              </div>
+            ))}
           </div>
-        ))}
-        <div className="profile-section">
-          <h2>Family Relationships</h2>
-
-          {memberRelationships.map((relation) => (
-            <div key={relation.id} className="relationship-card">
-              <h3>
-                {relation.memberOne.id === parseInt(id)
-                  ? relation.relationshipType
-                  : "Related To"}
-              </h3>
-
-              <p
-                style={{
-                  cursor: "pointer",
-                  color: "#4ade80",
-                  fontWeight: "bold",
-                }}
-                onClick={() => {
-                  const targetId =
-                    relation.memberOne.id === parseInt(id)
-                      ? relation.memberTwo.id
-                      : relation.memberOne.id;
-
-                  navigate(`/member/${targetId}`);
-                }}
-              >
-                {relation.memberOne.id === parseInt(id)
-                  ? relation.memberTwo.fullName
-                  : relation.memberOne.fullName}
-              </p>
-            </div>
-          ))}
-        </div>
+        )}
       </div>
+
+      {/* =====================================================
+          FAMILY RELATIONSHIPS
+          ===================================================== */}
+
+      <div className="profile-section">
+        <h2>Family Relationships</h2>
+
+        {memberRelationships.length === 0 ? (
+          <p>No relationships have been recorded yet.</p>
+        ) : (
+          <div className="relationship-list">
+            {memberRelationships.map((relation) => {
+              const isMemberOne = relation.memberOne?.id === memberId;
+
+              const relatedMember = isMemberOne
+                ? relation.memberTwo
+                : relation.memberOne;
+
+              if (!relatedMember) {
+                return null;
+              }
+
+              return (
+                <div key={relation.id} className="relationship-card">
+                  <h3>{relation.relationshipType}</h3>
+
+                  <p
+                    style={{
+                      cursor: "pointer",
+                      color: "#4ade80",
+                      fontWeight: "bold",
+                    }}
+                    onClick={() => navigate(`/member/${relatedMember.id}`)}
+                  >
+                    {relatedMember.fullName}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* =====================================================
+          BACK BUTTON
+          ===================================================== */}
+
+      <button onClick={() => navigate("/members")}>← Back to Members</button>
     </div>
   );
 }

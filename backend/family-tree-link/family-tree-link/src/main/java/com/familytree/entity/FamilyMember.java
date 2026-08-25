@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -30,6 +31,9 @@ public class FamilyMember {
 
     private String imagePath;
     private Double positionX;
+
+    @ManyToOne
+private Family family;
 
 private Double positionY;
     public FamilyMember() {
@@ -100,5 +104,13 @@ public Double getPositionY() {
 
 public void setPositionY(Double positionY) {
     this.positionY = positionY;
+}
+
+public Family getFamily() {
+    return family;
+}
+
+public void setFamily(Family family) {
+    this.family = family;
 }
 }

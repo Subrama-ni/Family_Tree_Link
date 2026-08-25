@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function GalleryPage() {
-  const [members, setMembers] = useState([]);
+  const API_URL = "http://localhost:8080";
 
+  const [members, setMembers] = useState([]);
   const [photos, setPhotos] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -12,60 +13,138 @@ function GalleryPage() {
     caption: "",
     imagePath: "",
   });
+
   const [selectedFile, setSelectedFile] = useState(null);
-
   const [preview, setPreview] = useState("");
-
   const [editingId, setEditingId] = useState(null);
-  const [memberFilter, setMemberFilter] = useState("");
 
+  // Filters
+  const [memberFilter, setMemberFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+
+  const getToken = () => {
+    return (
+      localStorage.getItem("token") ||
+      localStorage.getItem("jwt") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("accessToken")
+    );
+  };
+
+  const getAuthConfig = () => {
+    const token = getToken();
+
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
 
   useEffect(() => {
     fetchMembers();
-
     fetchPhotos();
   }, []);
 
   const fetchMembers = async () => {
-    const response = await axios.get("http://localhost:8080/api/members");
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/members`,
+        getAuthConfig(),
+      );
 
-    setMembers(response.data);
+      setMembers(response.data);
+    } catch (error) {
+      console.error("Failed to fetch members:", error);
+    }
   };
 
   const fetchPhotos = async () => {
-    const response = await axios.get("http://localhost:8080/api/photos");
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/photos`,
+        getAuthConfig(),
+      );
 
-    setPhotos(response.data);
+      setPhotos(response.data);
+    } catch (error) {
+      console.error("Failed to fetch photos:", error);
+    }
   };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    setSelectedFile(file);
+
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+
+    setSelectedFile(null);
+
+    setPreview("");
+
+    setFormData({
+      memberId: "",
+      category: "",
+      caption: "",
+      imagePath: "",
     });
   };
 
   const addPhoto = async () => {
     try {
+      if (!formData.memberId) {
+        alert("Please select a family member.");
+        return;
+      }
+
+      if (!selectedFile) {
+        alert("Please select an image.");
+        return;
+      }
+
+      if (!formData.category) {
+        alert("Please select a category.");
+        return;
+      }
+
+      /*
+       * Step 1:
+       * Upload image and verify member ownership.
+       */
       const uploadData = new FormData();
 
-      uploadData.append(
-        "file",
+      uploadData.append("file", selectedFile);
 
-        selectedFile,
-      );
+      uploadData.append("memberId", formData.memberId);
 
       const uploadResponse = await axios.post(
-        "http://localhost:8080/api/photos/upload",
-
+        `${API_URL}/api/photos/upload`,
         uploadData,
+        getAuthConfig(),
       );
 
+      /*
+       * Step 2:
+       * Save photo metadata.
+       */
       await axios.post(
-        "http://localhost:8080/api/photos",
-
+        `${API_URL}/api/photos`,
         {
           imagePath: uploadResponse.data,
 
@@ -77,66 +156,75 @@ function GalleryPage() {
             id: formData.memberId,
           },
         },
+        getAuthConfig(),
       );
 
-      fetchPhotos();
+      await fetchPhotos();
 
-      setPreview("");
+      resetForm();
 
-      setSelectedFile(null);
-
-      setFormData({
-        memberId: "",
-        category: "",
-        caption: "",
-        imagePath: "",
-      });
+      alert("Photo uploaded successfully.");
     } catch (error) {
-      console.log(error);
+      console.error("Photo upload failed:", error);
+
+      alert(error.response?.data || "Failed to upload photo.");
     }
   };
-  const deletePhoto = async (id) => {
-    if (!window.confirm("Delete Photo?")) return;
 
-    await axios.delete(`http://localhost:8080/api/photos/${id}`);
-
-    fetchPhotos();
-  };
   const editPhoto = (photo) => {
     setEditingId(photo.id);
 
     setFormData({
-      memberId: photo.familyMember?.id,
+      memberId: photo.familyMember?.id || "",
 
-      category: photo.category,
+      category: photo.category || "",
 
-      caption: photo.caption,
+      caption: photo.caption || "",
 
-      imagePath: photo.imagePath,
+      imagePath: photo.imagePath || "",
     });
 
-    setPreview(`http://localhost:8080/uploads/${photo.imagePath}`);
+    setPreview(`${API_URL}/uploads/${photo.imagePath}`);
+
+    setSelectedFile(null);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
+
   const updatePhoto = async () => {
     try {
+      if (!formData.memberId) {
+        alert("Please select a family member.");
+        return;
+      }
+
       let imagePath = formData.imagePath;
 
+      /*
+       * If a new image was selected,
+       * upload the replacement image.
+       */
       if (selectedFile) {
         const uploadData = new FormData();
 
         uploadData.append("file", selectedFile);
 
+        uploadData.append("memberId", formData.memberId);
+
         const uploadResponse = await axios.post(
-          "http://localhost:8080/api/photos/upload",
+          `${API_URL}/api/photos/upload`,
           uploadData,
+          getAuthConfig(),
         );
 
         imagePath = uploadResponse.data;
       }
 
       await axios.put(
-        `http://localhost:8080/api/photos/${editingId}`,
-
+        `${API_URL}/api/photos/${editingId}`,
         {
           imagePath,
 
@@ -148,30 +236,62 @@ function GalleryPage() {
             id: formData.memberId,
           },
         },
+        getAuthConfig(),
       );
 
-      fetchPhotos();
+      await fetchPhotos();
 
-      setEditingId(null);
+      resetForm();
 
-      setPreview("");
-
-      setSelectedFile(null);
-
-      setFormData({
-        memberId: "",
-        category: "",
-        caption: "",
-        imagePath: "",
-      });
+      alert("Photo updated successfully.");
     } catch (error) {
-      console.log(error);
+      console.error("Photo update failed:", error);
+
+      alert(error.response?.data || "Failed to update photo.");
     }
   };
+
+  const deletePhoto = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this photo?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/api/photos/${id}`, getAuthConfig());
+
+      await fetchPhotos();
+
+      alert("Photo deleted successfully.");
+    } catch (error) {
+      console.error("Photo deletion failed:", error);
+
+      alert(error.response?.data || "Failed to delete photo.");
+    }
+  };
+
+  /*
+   * ============================================================
+   * FILTERING
+   * ============================================================
+   */
+
+  const filteredPhotos = photos.filter((photo) => {
+    const matchesMember =
+      !memberFilter || String(photo.familyMember?.id) === String(memberFilter);
+
+    const matchesCategory =
+      !categoryFilter || photo.category === categoryFilter;
+
+    return matchesMember && matchesCategory;
+  });
 
   return (
     <div className="gallery-page">
       <h1>📸 Family Gallery</h1>
+
+      {/* =====================================================
+          GALLERY FORM
+      ====================================================== */}
 
       <div className="gallery-form">
         <select
@@ -195,17 +315,17 @@ function GalleryPage() {
         >
           <option value="">Select Category</option>
 
-          <option>Childhood</option>
+          <option value="Childhood">Childhood</option>
 
-          <option>School</option>
+          <option value="School">School</option>
 
-          <option>Graduation</option>
+          <option value="Graduation">Graduation</option>
 
-          <option>Wedding</option>
+          <option value="Wedding">Wedding</option>
 
-          <option>Family</option>
+          <option value="Family">Family</option>
 
-          <option>Other</option>
+          <option value="Other">Other</option>
         </select>
 
         <input
@@ -216,28 +336,29 @@ function GalleryPage() {
           onChange={handleChange}
         />
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files[0];
+        <input type="file" accept="image/*" onChange={handleFileChange} />
 
-            setSelectedFile(file);
-
-            setPreview(URL.createObjectURL(file));
-          }}
-        />
         {preview && (
-          <img src={preview} alt="preview" className="preview-image" />
+          <img src={preview} alt="Preview" className="preview-image" />
         )}
 
         {editingId ? (
-          <button onClick={updatePhoto}>Update Photo</button>
+          <>
+            <button onClick={updatePhoto}>Update Photo</button>
+
+            <button type="button" onClick={resetForm}>
+              Cancel
+            </button>
+          </>
         ) : (
           <button onClick={addPhoto}>Upload Photo</button>
         )}
       </div>
-      <h3>Filter Photos</h3>
+
+      {/* =====================================================
+          FILTERS
+      ====================================================== */}
+
       <div className="gallery-filters">
         <select
           value={memberFilter}
@@ -270,42 +391,57 @@ function GalleryPage() {
 
           <option value="Other">Other</option>
         </select>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMemberFilter("");
+            setCategoryFilter("");
+          }}
+        >
+          Clear Filters
+        </button>
       </div>
 
+      {/* =====================================================
+          GALLERY GRID
+      ====================================================== */}
+
       <div className="gallery-grid">
-        {photos
+        {filteredPhotos.length === 0 ? (
+          <div className="empty-gallery">
+            <h3>No photos found</h3>
 
-          .filter(
-            (photo) =>
-              memberFilter === "" ||
-              photo.familyMember?.id === Number(memberFilter),
-          )
-
-          .filter(
-            (photo) =>
-              categoryFilter === "" || photo.category === categoryFilter,
-          )
-
-          .map((photo) => (
+            <p>Upload your first family memory to get started.</p>
+          </div>
+        ) : (
+          filteredPhotos.map((photo) => (
             <div key={photo.id} className="photo-card">
               <img
-                src={`http://localhost:8080/uploads/${photo.imagePath}`}
-                alt=""
+                src={`${API_URL}/uploads/${photo.imagePath}`}
+                alt={photo.caption || "Family memory"}
               />
 
-              <h3>{photo.caption}</h3>
+              <div className="photo-info">
+                <h3>{photo.caption || "Untitled Memory"}</h3>
 
-              <p>{photo.category}</p>
+                <p>🏷️ {photo.category}</p>
 
-              <p>{photo.familyMember?.fullName}</p>
+                <p>👤 {photo.familyMember?.fullName || "Unknown Member"}</p>
+              </div>
 
               <div className="gallery-actions">
-                <button onClick={() => editPhoto(photo)}>✏ Edit</button>
+                <button type="button" onClick={() => editPhoto(photo)}>
+                  ✏️ Edit
+                </button>
 
-                <button onClick={() => deletePhoto(photo.id)}>🗑 Delete</button>
+                <button type="button" onClick={() => deletePhoto(photo.id)}>
+                  🗑 Delete
+                </button>
               </div>
             </div>
-          ))}
+          ))
+        )}
       </div>
     </div>
   );
