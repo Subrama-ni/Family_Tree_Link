@@ -14,4 +14,15 @@ public interface RelationshipRepository
             Long memberOneFamilyId,
             Long memberTwoFamilyId
     );
+
+    boolean existsByMemberOne_IdAndMemberTwo_Id(
+            Long memberOneId,
+            Long memberTwoId
+    );
+
+    List<Relationship>
+    findByMemberOne_IdOrMemberTwo_Id(
+            Long memberOneId,
+            Long memberTwoId
+    );
 }

@@ -7,12 +7,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.dto.AuthResponse;
 import com.dto.LoginRequest;
 import com.dto.RegisterRequest;
 import com.familytree.entity.PasswordResetToken;
 import com.familytree.entity.User;
 import com.familytree.repository.PasswordResetTokenRepository;
 import com.familytree.repository.UserRepository;
+import com.familytree.security.JwtService;
 
 @Service
 public class AuthService {
@@ -21,17 +23,20 @@ public class AuthService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final JwtService jwtService;
 
     public AuthService(
             UserRepository userRepository,
             PasswordResetTokenRepository tokenRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService) {
+            EmailService emailService,
+            JwtService jwtService) {
 
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.jwtService = jwtService;
     }
 
     // ============================================================
@@ -67,27 +72,62 @@ public class AuthService {
     // LOGIN
     // ============================================================
 
-    public String login(LoginRequest request) {
+    public AuthResponse login(
+            LoginRequest request) {
 
         User user =
                 userRepository.findByEmail(
                         request.getEmail())
                         .orElse(null);
 
+        /*
+         * User does not exist
+         */
         if (user == null) {
-            return "User not found";
+
+            return AuthResponse.builder()
+                    .token(null)
+                    .message("User not found")
+                    .build();
         }
 
+        /*
+         * Check password
+         */
         boolean passwordMatches =
                 passwordEncoder.matches(
                         request.getPassword(),
                         user.getPassword());
 
         if (!passwordMatches) {
-            return "Invalid password";
+
+            return AuthResponse.builder()
+                    .token(null)
+                    .message("Invalid password")
+                    .build();
         }
 
-        return "Login successful";
+        /*
+         * Generate JWT
+         *
+         * JwtService adds:
+         * - email
+         * - userId
+         * - fullName
+         * - familyId
+         * - issuedAt
+         * - expiration
+         */
+        String token =
+                jwtService.generateToken(user);
+
+        /*
+         * Return JWT + success message
+         */
+        return AuthResponse.builder()
+                .token(token)
+                .message("Login successful")
+                .build();
     }
 
     // ============================================================

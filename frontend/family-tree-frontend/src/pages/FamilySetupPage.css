@@ -1,0 +1,323 @@
+.family-setup-page {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(112, 145, 76, 0.12),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(112, 145, 76, 0.1),
+      transparent 35%
+    ),
+    #f5f6ef;
+}
+
+.family-setup-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.family-setup-background span {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(112, 145, 76, 0.06);
+  filter: blur(10px);
+  animation: setupFloat 8s ease-in-out infinite;
+}
+
+.family-setup-background span:nth-child(1) {
+  top: -100px;
+  left: -100px;
+}
+
+.family-setup-background span:nth-child(2) {
+  right: -100px;
+  top: 20%;
+  animation-delay: 2s;
+}
+
+.family-setup-background span:nth-child(3) {
+  bottom: -120px;
+  left: 35%;
+  animation-delay: 4s;
+}
+
+.family-setup-card {
+  position: relative;
+  z-index: 2;
+
+  width: min(820px, 100%);
+  padding: 55px;
+
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(100, 110, 80, 0.12);
+  border-radius: 32px;
+
+  box-shadow:
+    0 30px 80px rgba(45, 55, 35, 0.12),
+    0 8px 24px rgba(45, 55, 35, 0.06);
+
+  backdrop-filter: blur(18px);
+
+  text-align: center;
+
+  animation: setupCardReveal 0.7s ease both;
+}
+
+.family-setup-tree {
+  width: 76px;
+  height: 76px;
+
+  margin: 0 auto 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #eef3e5;
+
+  font-size: 42px;
+
+  box-shadow: 0 12px 30px rgba(77, 105, 51, 0.16);
+
+  animation: treePulse 3s ease-in-out infinite;
+}
+
+.family-setup-kicker {
+  display: block;
+
+  margin-bottom: 12px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+
+  color: #6d8059;
+}
+
+.family-setup-card h1 {
+  margin: 0;
+
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: 1.05;
+
+  color: #243024;
+}
+
+.family-setup-card h1 span {
+  display: block;
+
+  color: #718a56;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.family-setup-description {
+  max-width: 600px;
+
+  margin: 22px auto 40px;
+
+  font-size: 17px;
+  line-height: 1.7;
+
+  color: #687064;
+}
+
+.family-setup-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+
+  text-align: left;
+}
+
+.family-setup-option {
+  position: relative;
+
+  min-height: 210px;
+
+  padding: 28px;
+
+  border-radius: 22px;
+
+  border: 1px solid #e1e5db;
+
+  background: #ffffff;
+
+  cursor: pointer;
+
+  text-align: left;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.family-setup-option:hover {
+  transform: translateY(-6px);
+
+  border-color: #a8b99a;
+
+  box-shadow: 0 18px 35px rgba(55, 75, 45, 0.12);
+}
+
+.family-setup-option:active {
+  transform: translateY(-1px) scale(0.98);
+
+  transition-duration: 0.1s;
+}
+
+.family-setup-option-icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 20px;
+
+  border-radius: 14px;
+
+  background: #eef3e8;
+
+  font-size: 24px;
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease;
+}
+
+.family-setup-option:hover .family-setup-option-icon {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+.family-setup-option-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+
+  color: #829078;
+}
+
+.family-setup-option h2 {
+  margin: 7px 0;
+
+  font-size: 25px;
+
+  color: #263126;
+}
+
+.family-setup-option p {
+  max-width: 280px;
+
+  font-size: 14px;
+  line-height: 1.6;
+
+  color: #70776d;
+}
+
+.family-setup-arrow {
+  position: absolute;
+
+  right: 24px;
+  bottom: 24px;
+
+  font-size: 24px;
+
+  color: #667b52;
+
+  transition: transform 0.25s ease;
+}
+
+.family-setup-option:hover .family-setup-arrow {
+  transform: translateX(6px);
+}
+
+.family-setup-join:hover {
+  background: #fbfcf9;
+}
+
+.family-setup-create {
+  background: #f7f9f3;
+}
+
+.family-setup-note {
+  margin-top: 26px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-size: 12px;
+
+  color: #899086;
+}
+
+@keyframes setupCardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes treePulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes setupFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-25px);
+  }
+}
+
+@media (max-width: 700px) {
+  .family-setup-card {
+    padding: 35px 22px;
+    border-radius: 24px;
+  }
+
+  .family-setup-options {
+    grid-template-columns: 1fr;
+  }
+
+  .family-setup-option {
+    min-height: 180px;
+  }
+}

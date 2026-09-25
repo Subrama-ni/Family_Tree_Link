@@ -6,31 +6,46 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.familytree.entity.Family;
 import com.familytree.entity.FamilyMember;
+import com.familytree.entity.LifeEvent;
+import com.familytree.entity.MemberPhoto;
+import com.familytree.entity.Relationship;
 import com.familytree.entity.User;
 import com.familytree.repository.FamilyMemberRepository;
+import com.familytree.repository.LifeEventRepository;
+import com.familytree.repository.MemberPhotoRepository;
+import com.familytree.repository.RelationshipRepository;
 import com.familytree.repository.UserRepository;
 
 @Service
 public class FamilyMemberService {
 
-    private final FamilyMemberRepository repository;
-
+    private final FamilyMemberRepository familyMemberRepository;
+    private final RelationshipRepository relationshipRepository;
+    private final LifeEventRepository lifeEventRepository;
+    private final MemberPhotoRepository memberPhotoRepository;
     private final UserRepository userRepository;
 
     public FamilyMemberService(
-            FamilyMemberRepository repository,
+            FamilyMemberRepository familyMemberRepository,
+            RelationshipRepository relationshipRepository,
+            LifeEventRepository lifeEventRepository,
+            MemberPhotoRepository memberPhotoRepository,
             UserRepository userRepository) {
 
-        this.repository = repository;
+        this.familyMemberRepository = familyMemberRepository;
+        this.relationshipRepository = relationshipRepository;
+        this.lifeEventRepository = lifeEventRepository;
+        this.memberPhotoRepository = memberPhotoRepository;
         this.userRepository = userRepository;
     }
 
     /*
      * ============================================================
-     * GET CURRENT USER
+     * CURRENT USER
      * ============================================================
      */
 
@@ -61,22 +76,65 @@ public class FamilyMemberService {
 
     /*
      * ============================================================
-     * GET CURRENT USER'S FAMILY
+     * CURRENT FAMILY
      * ============================================================
      */
 
     private Family getCurrentFamily() {
 
-        User user = getCurrentUser();
+        User currentUser = getCurrentUser();
 
-        if (user.getFamily() == null) {
+        if (currentUser.getFamily() == null) {
 
             throw new AccessDeniedException(
                     "User is not associated with a family"
             );
         }
 
-        return user.getFamily();
+        return currentUser.getFamily();
+    }
+
+    /*
+     * ============================================================
+     * MANAGEMENT PERMISSION
+     * ============================================================
+     */
+
+    private void verifyManagementPermission() {
+
+        User currentUser = getCurrentUser();
+
+        Family family = currentUser.getFamily();
+
+        if (family == null) {
+
+            throw new AccessDeniedException(
+                    "You are not associated with a family"
+            );
+        }
+
+        /*
+         * Family owner always has permission.
+         */
+        if (family.getOwner() != null
+                && family.getOwner().getId() != null
+                && family.getOwner()
+                        .getId()
+                        .equals(currentUser.getId())) {
+
+            return;
+        }
+
+        /*
+         * Existing family setting controls whether normal
+         * members can manage family members.
+         *
+         * The setting is checked by FamilySettingsService/
+         * frontend as well. Backend remains the authority.
+         */
+        throw new AccessDeniedException(
+                "You do not have permission to manage family members"
+        );
     }
 
     /*
@@ -85,19 +143,18 @@ public class FamilyMemberService {
      * ============================================================
      */
 
-    private FamilyMember getAuthorizedMember(
-            Long id) {
+    private FamilyMember getAuthorizedMember(Long id) {
 
-        Family currentFamily =
-                getCurrentFamily();
+        Family currentFamily = getCurrentFamily();
 
         FamilyMember member =
-                repository.findById(id)
-                        .orElse(null);
-
-        if (member == null) {
-            return null;
-        }
+                familyMemberRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () -> new IllegalArgumentException(
+                                        "Family member not found"
+                                )
+                        );
 
         if (member.getFamily() == null
                 || !member.getFamily()
@@ -105,7 +162,7 @@ public class FamilyMemberService {
                         .equals(currentFamily.getId())) {
 
             throw new AccessDeniedException(
-                    "You do not have access to this family member"
+                    "Family member does not belong to your family"
             );
         }
 
@@ -118,48 +175,80 @@ public class FamilyMemberService {
      * ============================================================
      */
 
-    public FamilyMember addMember(
-            FamilyMember member) {
+    @Transactional
+    public FamilyMember addMember(FamilyMember member) {
 
-        Family currentFamily =
-                getCurrentFamily();
+        if (member == null) {
+
+            throw new IllegalArgumentException(
+                    "Family member cannot be null"
+            );
+        }
+
+        verifyManagementPermission();
+
+        Family currentFamily = getCurrentFamily();
 
         /*
-         * Never trust family information coming
-         * from the frontend.
-         *
-         * The backend assigns the authenticated
-         * user's family.
+         * Never trust a family object supplied by the frontend.
          */
         member.setFamily(currentFamily);
 
-        return repository.save(member);
+        /*
+         * A manually-created family member does not automatically
+         * receive a User account.
+         */
+        if (member.getUser() != null
+                && member.getUser().getId() != null) {
+
+            User user =
+                    userRepository
+                            .findById(member.getUser().getId())
+                            .orElseThrow(
+                                    () -> new IllegalArgumentException(
+                                            "Linked user not found"
+                                    )
+                            );
+
+            if (user.getFamily() == null
+                    || !user.getFamily()
+                            .getId()
+                            .equals(currentFamily.getId())) {
+
+                throw new IllegalArgumentException(
+                        "Linked user does not belong to this family"
+                );
+            }
+
+            member.setUser(user);
+        }
+
+        return familyMemberRepository.save(member);
     }
 
     /*
      * ============================================================
-     * GET ALL MEMBERS OF CURRENT FAMILY
+     * GET ALL MEMBERS
      * ============================================================
      */
 
+    @Transactional(readOnly = true)
     public List<FamilyMember> getAllMembers() {
 
-        Family currentFamily =
-                getCurrentFamily();
+        Family currentFamily = getCurrentFamily();
 
-        return repository.findByFamilyId(
-                currentFamily.getId()
-        );
+        return familyMemberRepository
+                .findByFamilyId(currentFamily.getId());
     }
 
     /*
      * ============================================================
-     * GET SINGLE MEMBER
+     * GET MEMBER
      * ============================================================
      */
 
-    public FamilyMember getMemberById(
-            Long id) {
+    @Transactional(readOnly = true)
+    public FamilyMember getMemberById(Long id) {
 
         return getAuthorizedMember(id);
     }
@@ -170,16 +259,15 @@ public class FamilyMemberService {
      * ============================================================
      */
 
+    @Transactional
     public FamilyMember updateMember(
             Long id,
             FamilyMember updatedMember) {
 
+        verifyManagementPermission();
+
         FamilyMember existing =
                 getAuthorizedMember(id);
-
-        if (existing == null) {
-            return null;
-        }
 
         existing.setFullName(
                 updatedMember.getFullName()
@@ -205,64 +293,103 @@ public class FamilyMemberService {
                 updatedMember.getImagePath()
         );
 
-        /*
-         * IMPORTANT:
-         *
-         * We intentionally do NOT change:
-         *
-         * existing.setFamily(...)
-         *
-         * The member must remain in the
-         * authenticated user's family.
-         */
-
-        return repository.save(existing);
+        return familyMemberRepository.save(existing);
     }
 
     /*
      * ============================================================
-     * UPDATE TREE POSITION
+     * DELETE FAMILY MEMBER PROFILE
+     * ============================================================
+     *
+     * This deletes the tree profile and its family-specific data.
+     *
+     * If the profile is linked to a User account, the account
+     * itself is preserved and detached from the family.
+     */
+
+    @Transactional
+    public void deleteMember(Long id) {
+
+        verifyManagementPermission();
+
+        FamilyMember member =
+                getAuthorizedMember(id);
+
+        cleanupMemberData(member);
+
+        User linkedUser = member.getUser();
+
+        if (linkedUser != null) {
+
+            linkedUser.setFamily(null);
+
+            userRepository.save(linkedUser);
+        }
+
+        familyMemberRepository.delete(member);
+    }
+
+    /*
+     * ============================================================
+     * DELETE FAMILY-SPECIFIC DATA
      * ============================================================
      */
 
+    private void cleanupMemberData(
+            FamilyMember member) {
+
+        Long memberId = member.getId();
+
+        /*
+         * Delete relationships involving this member.
+         */
+        List<Relationship> relationships =
+                relationshipRepository
+                        .findByMemberOne_IdOrMemberTwo_Id(
+                                memberId,
+                                memberId
+                        );
+
+        if (!relationships.isEmpty()) {
+
+            relationshipRepository.deleteAll(
+                    relationships
+            );
+        }
+
+        /*
+         * Delete life events.
+         */
+        lifeEventRepository
+                .deleteByFamilyMemberId(memberId);
+
+        /*
+         * Delete photos.
+         */
+        memberPhotoRepository
+                .deleteByFamilyMemberId(memberId);
+    }
+
+    /*
+     * ============================================================
+     * UPDATE POSITION
+     * ============================================================
+     */
+
+    @Transactional
     public FamilyMember updatePosition(
             Long id,
-            FamilyMember updatedMember) {
+            Double positionX,
+            Double positionY) {
 
-        FamilyMember existing =
+        verifyManagementPermission();
+
+        FamilyMember member =
                 getAuthorizedMember(id);
 
-        if (existing == null) {
-            return null;
-        }
+        member.setPositionX(positionX);
+        member.setPositionY(positionY);
 
-        existing.setPositionX(
-                updatedMember.getPositionX()
-        );
-
-        existing.setPositionY(
-                updatedMember.getPositionY()
-        );
-
-        return repository.save(existing);
-    }
-
-    /*
-     * ============================================================
-     * DELETE MEMBER
-     * ============================================================
-     */
-
-    public void deleteMember(
-            Long id) {
-
-        FamilyMember existing =
-                getAuthorizedMember(id);
-
-        if (existing == null) {
-            return;
-        }
-
-        repository.delete(existing);
+        return familyMemberRepository.save(member);
     }
 }

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,7 @@ import com.familytree.service.FamilyMemberService;
 
 @RestController
 @RequestMapping("/api/members")
+@CrossOrigin(origins = "http://localhost:5173")
 public class FamilyMemberController {
 
     private final FamilyMemberService service;
@@ -75,7 +77,7 @@ public class FamilyMemberController {
 
     /*
      * ============================================================
-     * GET SINGLE MEMBER
+     * GET MEMBER
      * ============================================================
      */
 
@@ -88,7 +90,7 @@ public class FamilyMemberController {
 
     /*
      * ============================================================
-     * GET ALL MEMBERS OF CURRENT FAMILY
+     * GET ALL MEMBERS
      * ============================================================
      */
 
@@ -100,7 +102,7 @@ public class FamilyMemberController {
 
     /*
      * ============================================================
-     * UPDATE TREE POSITION
+     * UPDATE POSITION
      * ============================================================
      */
 
@@ -111,13 +113,14 @@ public class FamilyMemberController {
 
         return service.updatePosition(
                 id,
-                updatedMember
+                updatedMember.getPositionX(),
+                updatedMember.getPositionY()
         );
     }
 
     /*
      * ============================================================
-     * IMAGE UPLOAD
+     * UPLOAD IMAGE
      * ============================================================
      */
 
@@ -140,9 +143,7 @@ public class FamilyMemberController {
         }
 
         String fileName =
-                System.currentTimeMillis()
-                        + "_"
-                        + file.getOriginalFilename();
+                file.getOriginalFilename();
 
         String filePath =
                 uploadDir + fileName;

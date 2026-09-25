@@ -33,46 +33,59 @@ public class JwtService {
 
     public String generateToken(User user) {
 
-        Date now = new Date();
+    Date now = new Date();
 
-        Date expiration =
-                new Date(
-                        now.getTime()
-                                + EXPIRATION_TIME
-                );
+    Date expiration =
+            new Date(
+                    now.getTime()
+                            + EXPIRATION_TIME
+            );
 
-        return Jwts.builder()
+    var builder =
+            Jwts.builder()
 
-                .setSubject(
-                        user.getEmail()
-                )
+                    .setSubject(
+                            user.getEmail()
+                    )
 
-                .claim(
-        "userId",
-        user.getId()
-)
+                    .claim(
+                            "userId",
+                            user.getId()
+                    )
 
-.claim(
-        "fullName",
-        user.getFullName()
-)
+                    .claim(
+                            "fullName",
+                            user.getFullName()
+                    );
 
-.claim(
-        "familyId",
-        user.getFamily().getId()
-)
+    /*
+     * A newly registered user may not belong
+     * to a family yet.
+     *
+     * Therefore, only add familyId when
+     * a family actually exists.
+     */
+    if (user.getFamily() != null) {
 
-                .setIssuedAt(now)
-
-                .setExpiration(expiration)
-
-                .signWith(
-                        getSigningKey(),
-                        SignatureAlgorithm.HS256
-                )
-
-                .compact();
+        builder.claim(
+                "familyId",
+                user.getFamily().getId()
+        );
     }
+
+    return builder
+
+            .setIssuedAt(now)
+
+            .setExpiration(expiration)
+
+            .signWith(
+                    getSigningKey(),
+                    SignatureAlgorithm.HS256
+            )
+
+            .compact();
+}
 
     public String extractEmail(
             String token) {

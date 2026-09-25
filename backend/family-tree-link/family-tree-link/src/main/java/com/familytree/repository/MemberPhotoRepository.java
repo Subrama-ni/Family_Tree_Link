@@ -9,25 +9,30 @@ import com.familytree.entity.MemberPhoto;
 public interface MemberPhotoRepository
         extends JpaRepository<MemberPhoto, Long> {
 
-    List<MemberPhoto>
-    findByFamilyMemberId(
+    /*
+     * ============================================================
+     * GET ALL PHOTOS OF A FAMILY MEMBER
+     * ============================================================
+     */
+    List<MemberPhoto> findByFamilyMemberId(
             Long memberId
     );
 
-    List<MemberPhoto>
-    findByFamilyMember_Family_Id(
+    /*
+     * ============================================================
+     * GET ALL PHOTOS OF A FAMILY
+     * ============================================================
+     */
+    List<MemberPhoto> findByFamilyMember_Family_Id(
             Long familyId
     );
 
-    List<MemberPhoto>
-    findByFamilyMember_Family_IdAndCategory(
-            Long familyId,
-            String category
-    );
-
-    List<MemberPhoto>
-    findByFamilyMember_Family_IdAndId(
-            Long familyId,
-            Long id
+    /*
+     * ============================================================
+     * DELETE ALL PHOTOS OF A FAMILY MEMBER
+     * ============================================================
+     */
+    void deleteByFamilyMemberId(
+            Long memberId
     );
 }

@@ -5,8 +5,11 @@ const api = axios.create({
 });
 
 /*
- * Automatically attach JWT to every request.
+ * ============================================================
+ * ATTACH JWT TO EVERY REQUEST
+ * ============================================================
  */
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -24,30 +27,64 @@ api.interceptors.request.use(
 );
 
 /*
- * Handle expired/invalid JWT.
+ * ============================================================
+ * HANDLE AUTHENTICATION ERRORS
+ * ============================================================
+ *
+ * IMPORTANT:
+ *
+ * 401 = Authentication problem
+ *      → JWT missing / expired / invalid
+ *      → redirect to login
+ *
+ * 403 = Authorization problem
+ *      → user is authenticated
+ *      → user may not have permission or family association
+ *      → DO NOT DELETE JWT
+ *      → DO NOT REDIRECT TO LOGIN
+ *
+ * This is important for users such as Manjula who can
+ * successfully authenticate but have not joined a family yet.
+ * ============================================================
  */
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
 
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      /*
-       * Don't redirect the login/register
-       * requests themselves.
-       */
+    const status = error.response?.status;
 
+    /*
+     * Only 401 should cause logout.
+     */
+    if (status === 401) {
       const requestUrl = error.config?.url || "";
 
-      if (
-        !requestUrl.includes("/api/auth/login") &&
-        !requestUrl.includes("/api/auth/register")
-      ) {
+      /*
+       * Do not interfere with authentication endpoints.
+       */
+      const isAuthRequest =
+        requestUrl.includes("/api/auth/login") ||
+        requestUrl.includes("/api/auth/register") ||
+        requestUrl.includes("/api/auth/forgot-password") ||
+        requestUrl.includes("/api/auth/reset-password");
+
+      if (!isAuthRequest) {
         localStorage.removeItem("token");
         localStorage.removeItem("isAuthenticated");
 
         window.location.href = "/login";
       }
     }
+
+    /*
+     * 403 is intentionally NOT handled here.
+     *
+     * The calling page/component should decide what to
+     * display to the authenticated user.
+     */
 
     return Promise.reject(error);
   },

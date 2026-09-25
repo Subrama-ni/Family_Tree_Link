@@ -7,7 +7,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -30,12 +32,28 @@ public class FamilyMember {
     private String occupation;
 
     private String imagePath;
+
     private Double positionX;
 
-    @ManyToOne
-private Family family;
+    private Double positionY;
 
-private Double positionY;
+    @ManyToOne
+    @JoinColumn(name = "family_id")
+    private Family family;
+
+    /*
+     * Registered account associated with this family-tree member.
+     *
+     * Nullable because a family-tree member can be created
+     * manually without having a login account.
+     */
+    @OneToOne
+    @JoinColumn(
+            name = "user_id",
+            unique = true
+    )
+    private User user;
+
     public FamilyMember() {
     }
 
@@ -84,33 +102,42 @@ private Double positionY;
     }
 
     public String getImagePath() {
-    return imagePath;
-}
+        return imagePath;
+    }
 
-public void setImagePath(String imagePath) {
-    this.imagePath = imagePath;
-}
-public Double getPositionX() {
-    return positionX;
-}
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
 
-public void setPositionX(Double positionX) {
-    this.positionX = positionX;
-}
+    public Double getPositionX() {
+        return positionX;
+    }
 
-public Double getPositionY() {
-    return positionY;
-}
+    public void setPositionX(Double positionX) {
+        this.positionX = positionX;
+    }
 
-public void setPositionY(Double positionY) {
-    this.positionY = positionY;
-}
+    public Double getPositionY() {
+        return positionY;
+    }
 
-public Family getFamily() {
-    return family;
-}
+    public void setPositionY(Double positionY) {
+        this.positionY = positionY;
+    }
 
-public void setFamily(Family family) {
-    this.family = family;
-}
+    public Family getFamily() {
+        return family;
+    }
+
+    public void setFamily(Family family) {
+        this.family = family;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

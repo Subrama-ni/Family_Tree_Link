@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import ReactFlow, {
   Background,
@@ -13,6 +13,12 @@ import api from "../services/api";
 
 import FamilyNode from "./FamilyNode";
 
+/*
+ * ============================================================
+ * NODE TYPES
+ * ============================================================
+ */
+
 const nodeTypes = {
   familyNode: FamilyNode,
 };
@@ -23,198 +29,40 @@ const nodeTypes = {
  * ============================================================
  */
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 250;
+const NODE_WIDTH = 240;
+const NODE_HEIGHT = 340;
 
-const HORIZONTAL_GAP = 90;
-const GENERATION_GAP = 150;
+const SPOUSE_GAP = 35;
 
-const ROOT_WIDTH = 260;
+/*
+ * Gap between different family branches.
+ */
+const FAMILY_GAP = 180;
+
+/*
+ * Vertical distance between generations.
+ */
+const GENERATION_GAP = 180;
+
+/*
+ * Width of the family root node.
+ */
+const FAMILY_ROOT_WIDTH = 280;
+
+/*
+ * Invisible junction node.
+ */
+const JUNCTION_SIZE = 4;
 
 /*
  * ============================================================
- * RELATIONSHIP VISUAL CONFIGURATION
+ * HELPERS
  * ============================================================
  */
 
-const relationshipVisuals = {
-  Husband: {
-    color: "#c77988",
-    labelColor: "#a65366",
-    background: "rgba(255, 245, 247, 0.96)",
-    className: "relationship-spouse",
-  },
+const numberId = (value) => Number(value);
 
-  Wife: {
-    color: "#c77988",
-    labelColor: "#a65366",
-    background: "rgba(255, 245, 247, 0.96)",
-    className: "relationship-spouse",
-  },
-
-  Spouse: {
-    color: "#c77988",
-    labelColor: "#a65366",
-    background: "rgba(255, 245, 247, 0.96)",
-    className: "relationship-spouse",
-  },
-
-  Father: {
-    color: "#789456",
-    labelColor: "#58703e",
-    background: "rgba(244, 249, 237, 0.96)",
-    className: "relationship-parent",
-  },
-
-  Mother: {
-    color: "#789456",
-    labelColor: "#58703e",
-    background: "rgba(244, 249, 237, 0.96)",
-    className: "relationship-parent",
-  },
-
-  Parent: {
-    color: "#789456",
-    labelColor: "#58703e",
-    background: "rgba(244, 249, 237, 0.96)",
-    className: "relationship-parent",
-  },
-
-  Son: {
-    color: "#789456",
-    labelColor: "#58703e",
-    background: "rgba(244, 249, 237, 0.96)",
-    className: "relationship-child",
-  },
-
-  Daughter: {
-    color: "#789456",
-    labelColor: "#58703e",
-    background: "rgba(244, 249, 237, 0.96)",
-    className: "relationship-child",
-  },
-
-  Brother: {
-    color: "#638bb5",
-    labelColor: "#466e99",
-    background: "rgba(240, 247, 255, 0.96)",
-    className: "relationship-sibling",
-  },
-
-  Sister: {
-    color: "#638bb5",
-    labelColor: "#466e99",
-    background: "rgba(240, 247, 255, 0.96)",
-    className: "relationship-sibling",
-  },
-
-  Grandfather: {
-    color: "#b19650",
-    labelColor: "#8d7337",
-    background: "rgba(252, 248, 232, 0.96)",
-    className: "relationship-grand",
-  },
-
-  Grandmother: {
-    color: "#b19650",
-    labelColor: "#8d7337",
-    background: "rgba(252, 248, 232, 0.96)",
-    className: "relationship-grand",
-  },
-
-  Grandson: {
-    color: "#b19650",
-    labelColor: "#8d7337",
-    background: "rgba(252, 248, 232, 0.96)",
-    className: "relationship-grand",
-  },
-
-  Granddaughter: {
-    color: "#b19650",
-    labelColor: "#8d7337",
-    background: "rgba(252, 248, 232, 0.96)",
-    className: "relationship-grand",
-  },
-
-  Uncle: {
-    color: "#8a70ad",
-    labelColor: "#6d5292",
-    background: "rgba(248, 243, 255, 0.96)",
-    className: "relationship-extended",
-  },
-
-  Aunt: {
-    color: "#8a70ad",
-    labelColor: "#6d5292",
-    background: "rgba(248, 243, 255, 0.96)",
-    className: "relationship-extended",
-  },
-
-  Nephew: {
-    color: "#8a70ad",
-    labelColor: "#6d5292",
-    background: "rgba(248, 243, 255, 0.96)",
-    className: "relationship-extended",
-  },
-
-  Niece: {
-    color: "#8a70ad",
-    labelColor: "#6d5292",
-    background: "rgba(248, 243, 255, 0.96)",
-    className: "relationship-extended",
-  },
-
-  Cousin: {
-    color: "#55a39b",
-    labelColor: "#3c8179",
-    background: "rgba(238, 252, 249, 0.96)",
-    className: "relationship-cousin",
-  },
-
-  Other: {
-    color: "#a18b58",
-    labelColor: "#806c3e",
-    background: "rgba(250, 247, 237, 0.96)",
-    className: "relationship-other",
-  },
-};
-
-/*
- * ============================================================
- * RELATIONSHIP HELPERS
- * ============================================================
- */
-
-/*
- * Father / Mother / Parent
- *
- * memberOne = parent
- * memberTwo = child
- */
-
-const isParentRelationship = (type) => {
-  return type === "Father" || type === "Mother" || type === "Parent";
-};
-
-/*
- * Son / Daughter are the reverse semantic direction.
- *
- * Example:
- *
- * Subramani -- Son --> Thullasi
- *
- * means:
- *
- * Thullasi --> Subramani
- */
-
-const isChildRelationship = (type) => {
-  return type === "Son" || type === "Daughter";
-};
-
-const isSpouseRelationship = (type) => {
-  return type === "Husband" || type === "Wife" || type === "Spouse";
-};
+const normalizeId = (value) => String(Number(value));
 
 /*
  * ============================================================
@@ -222,144 +70,14 @@ const isSpouseRelationship = (type) => {
  * ============================================================
  */
 
-function FamilyTree() {
+function FamilyTree({ onReactFlowInit }) {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
-  const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [hoveredMemberId, setHoveredMemberId] = useState(null);
-
-  /*
-   * ==========================================================
-   * ACTIVE MEMBER
-   * ==========================================================
-   */
-
-  const activeMemberId =
-    selectedMemberId !== null ? selectedMemberId : hoveredMemberId;
-
-  /*
-   * ==========================================================
-   * HIGHLIGHTED RELATIONSHIPS
-   * ==========================================================
-   */
-
-  const highlightedData = useMemo(() => {
-    if (activeMemberId === null) {
-      return {
-        nodeIds: new Set(),
-        edgeIds: new Set(),
-      };
-    }
-
-    const activeId = activeMemberId.toString();
-
-    const nodeIds = new Set([activeId]);
-
-    const edgeIds = new Set();
-
-    edges.forEach((edge) => {
-      if (edge.source === activeId || edge.target === activeId) {
-        edgeIds.add(edge.id);
-
-        nodeIds.add(edge.source);
-
-        nodeIds.add(edge.target);
-      }
-    });
-
-    return {
-      nodeIds,
-      edgeIds,
-    };
-  }, [activeMemberId, edges]);
-
-  /*
-   * ==========================================================
-   * DISPLAY NODES
-   * ==========================================================
-   */
-
-  const displayNodes = useMemo(() => {
-    if (activeMemberId === null) {
-      return nodes.map((node) => ({
-        ...node,
-
-        className:
-          node.className
-            ?.replace(" family-node-highlighted", "")
-            .replace(" family-node-dimmed", "") || undefined,
-      }));
-    }
-
-    return nodes.map((node) => {
-      /*
-       * Keep family root visible.
-       */
-
-      if (node.id.startsWith("family-")) {
-        return {
-          ...node,
-
-          className: `${node.className || ""} family-root-highlight-safe`,
-        };
-      }
-
-      const connected = highlightedData.nodeIds.has(node.id);
-
-      const active = node.id === activeMemberId.toString();
-
-      return {
-        ...node,
-
-        className: [
-          node.className || "",
-
-          active ? "family-node-highlighted" : "",
-
-          !connected ? "family-node-dimmed" : "",
-        ]
-          .filter(Boolean)
-          .join(" "),
-      };
-    });
-  }, [nodes, activeMemberId, highlightedData.nodeIds]);
-
-  /*
-   * ==========================================================
-   * DISPLAY EDGES
-   * ==========================================================
-   */
-
-  const displayEdges = useMemo(() => {
-    if (activeMemberId === null) {
-      return edges.map((edge) => ({
-        ...edge,
-
-        className:
-          edge.className
-            ?.replace(" relationship-edge-active", "")
-            .replace(" relationship-edge-dimmed", "") || undefined,
-      }));
-    }
-
-    return edges.map((edge) => {
-      const active = highlightedData.edgeIds.has(edge.id);
-
-      return {
-        ...edge,
-
-        className: [
-          edge.className || "",
-
-          active ? "relationship-edge-active" : "relationship-edge-dimmed",
-        ]
-          .filter(Boolean)
-          .join(" "),
-      };
-    });
-  }, [edges, activeMemberId, highlightedData.edgeIds]);
+  // The React Flow surface follows the complete tree dimensions.
+  const [treeSize, setTreeSize] = useState({ width: 1200, height: 900 });
 
   /*
    * ==========================================================
@@ -373,12 +91,14 @@ function FamilyTree() {
 
   /*
    * ==========================================================
-   * FETCH TREE DATA
+   * FETCH DATA
    * ==========================================================
    */
 
   const fetchTreeData = async () => {
     try {
+      setLoading(true);
+
       /*
        * --------------------------------------------------------
        * FAMILY
@@ -405,287 +125,593 @@ function FamilyTree() {
 
       const family = familyResponse.data;
 
-      const members = membersResponse.data;
+      const members = membersResponse.data || [];
 
-      const relationships = relationshipsResponse.data;
+      const relationships = relationshipsResponse.data || [];
 
       console.log("Family:", family);
-
       console.log("Members:", members);
-
       console.log("Relationships:", relationships);
 
       /*
        * ========================================================
-       * PARENT RELATIONSHIPS
+       * MEMBER MAP
+       * ========================================================
+       */
+
+      const memberMap = {};
+
+      members.forEach((member) => {
+        memberMap[numberId(member.id)] = member;
+      });
+
+      /*
+       * ========================================================
+       * NORMALIZE RELATIONSHIPS
+       * ========================================================
        *
-       * Only these determine generation.
+       * We convert every parent/child relationship into:
+       *
+       * parentId
+       * childId
+       *
+       * Therefore both of these work:
+       *
+       * Father → Son
+       *
+       * Son → Father
+       *
        * ========================================================
        */
 
       const parentRelations = [];
 
+      const spouseRelations = [];
+
       const parentChildKeys = new Set();
-
-      relationships.forEach((relationship) => {
-        const type = relationship.relationshipType;
-
-        if (isParentRelationship(type)) {
-          if (!relationship.memberOne || !relationship.memberTwo) {
-            return;
-          }
-
-          const parentId = Number(relationship.memberOne.id);
-
-          const childId = Number(relationship.memberTwo.id);
-
-          const key = `${parentId}-${childId}`;
-
-          if (!parentChildKeys.has(key)) {
-            parentChildKeys.add(key);
-
-            parentRelations.push({
-              parentId,
-              childId,
-              type,
-            });
-          }
-        }
-
-        /*
-         * Son / Daughter:
-         *
-         * memberOne = child
-         * memberTwo = parent
-         *
-         * Therefore reverse it.
-         */
-
-        if (isChildRelationship(type)) {
-          if (!relationship.memberOne || !relationship.memberTwo) {
-            return;
-          }
-
-          const parentId = Number(relationship.memberTwo.id);
-
-          const childId = Number(relationship.memberOne.id);
-
-          const key = `${parentId}-${childId}`;
-
-          if (!parentChildKeys.has(key)) {
-            parentChildKeys.add(key);
-
-            parentRelations.push({
-              parentId,
-              childId,
-              type,
-            });
-          }
-        }
-      });
-
-      /*
-       * ========================================================
-       * SPOUSE PAIRS
-       * ========================================================
-       */
-
-      const spousePairs = [];
 
       const spouseKeys = new Set();
 
       relationships.forEach((relationship) => {
-        if (!isSpouseRelationship(relationship.relationshipType)) {
-          return;
-        }
-
         if (!relationship.memberOne || !relationship.memberTwo) {
           return;
         }
 
-        const id1 = Number(relationship.memberOne.id);
+        const memberOneId = numberId(relationship.memberOne.id);
 
-        const id2 = Number(relationship.memberTwo.id);
+        const memberTwoId = numberId(relationship.memberTwo.id);
 
-        if (id1 === id2) {
+        const type = String(relationship.relationshipType || "").trim();
+
+        /*
+         * ------------------------------------------------------
+         * PARENT → CHILD
+         * ------------------------------------------------------
+         */
+
+        if (type === "Father" || type === "Mother" || type === "Parent") {
+          const parentId = memberOneId;
+
+          const childId = memberTwoId;
+
+          const key = `${parentId}-${childId}`;
+
+          if (!parentChildKeys.has(key)) {
+            parentChildKeys.add(key);
+
+            parentRelations.push({
+              parentId,
+              childId,
+              type,
+            });
+          }
+
           return;
         }
 
-        const smaller = Math.min(id1, id2);
+        /*
+         * ------------------------------------------------------
+         * CHILD → PARENT
+         * ------------------------------------------------------
+         *
+         * Example:
+         *
+         * Subramani → Son → Muniyappa
+         *
+         * becomes:
+         *
+         * Muniyappa → Subramani
+         * ------------------------------------------------------
+         */
 
-        const larger = Math.max(id1, id2);
+        if (type === "Son" || type === "Daughter") {
+          const parentId = memberTwoId;
 
-        const key = `${smaller}-${larger}`;
+          const childId = memberOneId;
 
-        if (!spouseKeys.has(key)) {
-          spouseKeys.add(key);
+          const key = `${parentId}-${childId}`;
 
-          spousePairs.push({
-            memberOneId: id1,
+          if (!parentChildKeys.has(key)) {
+            parentChildKeys.add(key);
 
-            memberTwoId: id2,
-          });
+            parentRelations.push({
+              parentId,
+              childId,
+              type,
+            });
+          }
+
+          return;
+        }
+
+        /*
+         * ------------------------------------------------------
+         * SPOUSE
+         * ------------------------------------------------------
+         */
+
+        if (type === "Husband" || type === "Wife" || type === "Spouse") {
+          if (memberOneId === memberTwoId) {
+            return;
+          }
+
+          const smaller = Math.min(memberOneId, memberTwoId);
+
+          const larger = Math.max(memberOneId, memberTwoId);
+
+          const key = `${smaller}-${larger}`;
+
+          if (!spouseKeys.has(key)) {
+            spouseKeys.add(key);
+
+            spouseRelations.push({
+              memberOneId,
+              memberTwoId,
+            });
+          }
+        }
+      });
+
+      console.log("Normalized Parent Relations:", parentRelations);
+
+      console.log("Normalized Spouse Relations:", spouseRelations);
+
+      /*
+       * ========================================================
+       * SPOUSE MAP
+       * ========================================================
+       */
+
+      const spouseMap = {};
+
+      spouseRelations.forEach((pair) => {
+        const id1 = numberId(pair.memberOneId);
+
+        const id2 = numberId(pair.memberTwoId);
+
+        spouseMap[id1] = id2;
+
+        spouseMap[id2] = id1;
+      });
+
+      /*
+       * ========================================================
+       * PARENT MAP
+       * ========================================================
+       *
+       * childId → [parentId, parentId]
+       *
+       * Example:
+       *
+       * Subramani → [Muniyappa, Lakshmamma]
+       *
+       * ========================================================
+       */
+
+      const parentsByChild = {};
+
+      parentRelations.forEach((relation) => {
+        const childId = numberId(relation.childId);
+
+        const parentId = numberId(relation.parentId);
+
+        if (!parentsByChild[childId]) {
+          parentsByChild[childId] = [];
+        }
+
+        if (!parentsByChild[childId].includes(parentId)) {
+          parentsByChild[childId].push(parentId);
         }
       });
 
       /*
        * ========================================================
-       * GENERATIONS
+       * CHILDREN MAP
+       * ========================================================
+       *
+       * parentId → [childId, childId]
+       *
+       * ========================================================
+       */
+
+      const childrenByParent = {};
+
+      parentRelations.forEach((relation) => {
+        const parentId = numberId(relation.parentId);
+
+        const childId = numberId(relation.childId);
+
+        if (!childrenByParent[parentId]) {
+          childrenByParent[parentId] = [];
+        }
+
+        if (!childrenByParent[parentId].includes(childId)) {
+          childrenByParent[parentId].push(childId);
+        }
+      });
+
+      /*
+       * ========================================================
+       * BUILD FAMILY UNITS
+       * ========================================================
+       *
+       * A family unit is:
+       *
+       * Husband + Wife
+       *
+       * OR
+       *
+       * Single member
+       *
+       * ========================================================
+       */
+
+      const familyUnitByMember = {};
+
+      const familyUnits = [];
+
+      const processedMembers = new Set();
+
+      members.forEach((member) => {
+        const id = numberId(member.id);
+
+        if (processedMembers.has(id)) {
+          return;
+        }
+
+        const spouseId = spouseMap[id];
+
+        /*
+         * Couple
+         */
+
+        if (
+          spouseId &&
+          memberMap[spouseId] &&
+          !processedMembers.has(spouseId)
+        ) {
+          const spouse = memberMap[spouseId];
+
+          const ids = [id, numberId(spouse.id)].sort((a, b) => a - b);
+
+          const unit = {
+            id: `family-unit-${ids[0]}-${ids[1]}`,
+
+            memberIds: ids,
+
+            members: [memberMap[ids[0]], memberMap[ids[1]]],
+
+            children: [],
+
+            parentUnitIds: [],
+
+            childUnitIds: [],
+          };
+
+          familyUnits.push(unit);
+
+          familyUnitByMember[id] = unit;
+
+          familyUnitByMember[spouseId] = unit;
+
+          processedMembers.add(id);
+
+          processedMembers.add(spouseId);
+
+          return;
+        }
+
+        /*
+         * Single member
+         */
+
+        const unit = {
+          id: `family-unit-${id}`,
+
+          memberIds: [id],
+
+          members: [member],
+
+          children: [],
+
+          parentUnitIds: [],
+
+          childUnitIds: [],
+        };
+
+        familyUnits.push(unit);
+
+        familyUnitByMember[id] = unit;
+
+        processedMembers.add(id);
+      });
+
+      /*
+       * ========================================================
+       * CONNECT FAMILY UNITS
+       * ========================================================
+       *
+       * Every child belongs to the family unit containing
+       * their parent(s).
+       *
+       * This is the important part that fixes the current
+       * "everything is connected to everything" appearance.
+       * ========================================================
+       */
+
+      const childUnitSeen = new Set();
+
+      parentRelations.forEach((relation) => {
+        const parentId = numberId(relation.parentId);
+
+        const childId = numberId(relation.childId);
+
+        const parentUnit = familyUnitByMember[parentId];
+
+        const childUnit = familyUnitByMember[childId];
+
+        if (!parentUnit || !childUnit) {
+          return;
+        }
+
+        /*
+         * Don't allow a unit to become its own parent.
+         */
+
+        if (parentUnit.id === childUnit.id) {
+          return;
+        }
+
+        /*
+         * Add child to parent unit.
+         */
+
+        if (!parentUnit.children.includes(childId)) {
+          parentUnit.children.push(childId);
+        }
+
+        /*
+         * Parent unit → child unit.
+         */
+
+        const connectionKey = `${parentUnit.id}->${childUnit.id}`;
+
+        if (!childUnitSeen.has(connectionKey)) {
+          childUnitSeen.add(connectionKey);
+
+          if (!parentUnit.childUnitIds.includes(childUnit.id)) {
+            parentUnit.childUnitIds.push(childUnit.id);
+          }
+
+          if (!childUnit.parentUnitIds.includes(parentUnit.id)) {
+            childUnit.parentUnitIds.push(parentUnit.id);
+          }
+        }
+      });
+
+      console.log("Family Units:", familyUnits);
+
+      /*
+       * ========================================================
+       * FIND ROOT FAMILY UNITS
+       * ========================================================
+       *
+       * A root unit has no parents.
+       * ========================================================
+       */
+
+      let rootUnits = familyUnits.filter(
+        (unit) => unit.parentUnitIds.length === 0,
+      );
+
+      /*
+       * Safety fallback.
+       */
+
+      if (rootUnits.length === 0) {
+        rootUnits = familyUnits.slice(0, 1);
+      }
+
+      /*
+       * ========================================================
+       * BUILD DESCENDANT WIDTH
+       * ========================================================
+       *
+       * This calculates how much horizontal space each family
+       * branch needs.
+       *
+       * Example:
+       *
+       *                 Father ─ Mother
+       *                       |
+       *              ┌────────┴────────┐
+       *              │                 │
+       *            Son               Daughter
+       *             |
+       *          Wife
+       *             |
+       *          Children
+       *
+       * The parent's branch receives enough width for all of
+       * its children instead of simply putting everyone into
+       * one generation row.
+       * ========================================================
+       */
+
+      const unitWidthCache = new Map();
+
+      const calculatingUnits = new Set();
+
+      const getOwnUnitWidth = (unit) => {
+        if (unit.members.length === 2) {
+          return NODE_WIDTH * 2 + SPOUSE_GAP;
+        }
+
+        return NODE_WIDTH;
+      };
+
+      const getUnitWidth = (unit) => {
+        if (unitWidthCache.has(unit.id)) {
+          return unitWidthCache.get(unit.id);
+        }
+
+        /*
+         * Protect against accidental circular relationship
+         * data.
+         */
+
+        if (calculatingUnits.has(unit.id)) {
+          return getOwnUnitWidth(unit);
+        }
+
+        calculatingUnits.add(unit.id);
+
+        const ownWidth = getOwnUnitWidth(unit);
+
+        /*
+         * No children.
+         */
+
+        if (!unit.childUnitIds || unit.childUnitIds.length === 0) {
+          calculatingUnits.delete(unit.id);
+
+          unitWidthCache.set(unit.id, ownWidth);
+
+          return ownWidth;
+        }
+
+        /*
+         * Calculate children's required width.
+         */
+
+        let childrenWidth = 0;
+
+        unit.childUnitIds.forEach((childUnitId) => {
+          const childUnit = familyUnits.find((item) => item.id === childUnitId);
+
+          if (!childUnit) {
+            return;
+          }
+
+          childrenWidth += getUnitWidth(childUnit);
+        });
+
+        /*
+         * Add gaps between child branches.
+         */
+
+        childrenWidth += Math.max(0, unit.childUnitIds.length - 1) * FAMILY_GAP;
+
+        const finalWidth = Math.max(ownWidth, childrenWidth);
+
+        calculatingUnits.delete(unit.id);
+
+        unitWidthCache.set(unit.id, finalWidth);
+
+        return finalWidth;
+      };
+
+      /*
+       * Calculate widths for every unit.
+       */
+
+      familyUnits.forEach((unit) => {
+        getUnitWidth(unit);
+      });
+
+      /*
+       * ========================================================
+       * GENERATION MAP
+       * ========================================================
+       *
+       * This is still useful for vertical positioning.
        * ========================================================
        */
 
       const generationMap = {};
 
-      members.forEach((member) => {
-        generationMap[Number(member.id)] = null;
+      familyUnits.forEach((unit) => {
+        generationMap[unit.id] = null;
       });
 
-      const childrenIds = new Set(
-        parentRelations.map((relation) => relation.childId),
-      );
-
-      /*
-       * Members with no parent relationship
-       * begin at generation 0.
-       */
-
-      members.forEach((member) => {
-        const id = Number(member.id);
-
-        if (!childrenIds.has(id)) {
-          generationMap[id] = 0;
-        }
-      });
-
-      /*
-       * --------------------------------------------------------
-       * Recursive generation
-       * --------------------------------------------------------
-       */
-
-      const calculateGeneration = (memberId, visiting = new Set()) => {
-        memberId = Number(memberId);
-
+      const calculateUnitGeneration = (unit, visiting = new Set()) => {
         if (
-          generationMap[memberId] !== null &&
-          generationMap[memberId] !== undefined
+          generationMap[unit.id] !== null &&
+          generationMap[unit.id] !== undefined
         ) {
-          return generationMap[memberId];
+          return generationMap[unit.id];
         }
 
-        if (visiting.has(memberId)) {
+        if (visiting.has(unit.id)) {
           return 0;
         }
 
-        visiting.add(memberId);
+        visiting.add(unit.id);
 
-        const parents = parentRelations.filter(
-          (relation) => relation.childId === memberId,
-        );
-
-        if (parents.length === 0) {
-          generationMap[memberId] = 0;
+        if (!unit.parentUnitIds || unit.parentUnitIds.length === 0) {
+          generationMap[unit.id] = 0;
 
           return 0;
         }
 
-        let highest = 0;
+        let generation = 0;
 
-        parents.forEach((relation) => {
-          const parentGeneration = calculateGeneration(
-            relation.parentId,
-            new Set(visiting),
+        unit.parentUnitIds.forEach((parentUnitId) => {
+          const parentUnit = familyUnits.find(
+            (item) => item.id === parentUnitId,
           );
 
-          highest = Math.max(highest, parentGeneration);
-        });
-
-        generationMap[memberId] = highest + 1;
-
-        return generationMap[memberId];
-      };
-
-      members.forEach((member) => {
-        calculateGeneration(member.id);
-      });
-
-      /*
-       * --------------------------------------------------------
-       * SPOUSES SAME GENERATION
-       * --------------------------------------------------------
-       */
-
-      let changed = true;
-
-      let safety = 0;
-
-      while (changed && safety < 100) {
-        changed = false;
-
-        safety++;
-
-        spousePairs.forEach((pair) => {
-          const id1 = Number(pair.memberOneId);
-
-          const id2 = Number(pair.memberTwoId);
-
-          const gen1 = generationMap[id1];
-
-          const gen2 = generationMap[id2];
-
-          if (
-            gen1 === null ||
-            gen2 === null ||
-            gen1 === undefined ||
-            gen2 === undefined
-          ) {
+          if (!parentUnit) {
             return;
           }
 
-          const target = Math.max(gen1, gen2);
-
-          if (gen1 !== target) {
-            generationMap[id1] = target;
-
-            changed = true;
-          }
-
-          if (gen2 !== target) {
-            generationMap[id2] = target;
-
-            changed = true;
-          }
+          generation = Math.max(
+            generation,
+            calculateUnitGeneration(parentUnit, new Set(visiting)) + 1,
+          );
         });
-      }
 
-      /*
-       * ========================================================
-       * GENERATION GROUPS
-       * ========================================================
-       */
+        generationMap[unit.id] = generation;
 
-      const generationGroups = {};
+        return generation;
+      };
 
-      members.forEach((member) => {
-        const generation = generationMap[Number(member.id)] ?? 0;
-
-        if (!generationGroups[generation]) {
-          generationGroups[generation] = [];
-        }
-
-        generationGroups[generation].push(member);
+      familyUnits.forEach((unit) => {
+        calculateUnitGeneration(unit);
       });
 
       /*
        * ========================================================
-       * NODES
+       * GENERATE NODES
        * ========================================================
        */
 
       const generatedNodes = [];
 
       /*
+       * --------------------------------------------------------
        * FAMILY ROOT
+       * --------------------------------------------------------
        */
 
       generatedNodes.push({
@@ -702,163 +728,226 @@ function FamilyTree() {
           label: `🌳 ${family.name}`,
         },
 
-        className: "cinematic-family-root",
+        draggable: false,
+
+        selectable: false,
 
         style: {
-          width: ROOT_WIDTH,
+          width: FAMILY_ROOT_WIDTH,
 
-          padding: "18px 22px",
+          padding: "16px 22px",
 
-          borderRadius: "22px",
+          borderRadius: "18px",
 
-          border: "1px solid rgba(255,255,255,0.9)",
+          border: "1px solid #d7e2d2",
 
-          background:
-            "linear-gradient(145deg, rgba(255,255,255,0.96), rgba(238,244,226,0.94))",
+          background: "linear-gradient(135deg, #ffffff, #f5f9f1)",
 
-          color: "#3c5034",
+          color: "#263528",
 
-          fontWeight: "800",
+          fontWeight: "700",
 
-          fontSize: "18px",
+          fontSize: "20px",
 
           textAlign: "center",
 
-          boxShadow: "0 20px 55px rgba(55,75,45,0.16)",
-
-          backdropFilter: "blur(16px)",
+          boxShadow: "0 8px 24px rgba(62, 88, 60, 0.10)",
         },
-
-        draggable: false,
       });
 
       /*
-       * MEMBER NODES
+       * ========================================================
+       * POSITION FAMILY UNITS RECURSIVELY
+       * ========================================================
        */
 
-      Object.keys(generationGroups)
-        .sort((a, b) => Number(a) - Number(b))
-        .forEach((generation) => {
-          const group = generationGroups[generation];
+      const positionedUnits = new Set();
 
-          const processed = new Set();
+      const positionFamilyUnit = (unit, centerX) => {
+        if (positionedUnits.has(unit.id)) {
+          return;
+        }
 
-          const units = [];
+        positionedUnits.add(unit.id);
 
-          /*
-           * Group spouses together.
-           */
+        const generation = generationMap[unit.id] ?? 0;
 
-          group.forEach((member) => {
-            const memberId = Number(member.id);
+        const y = 150 + generation * (NODE_HEIGHT + GENERATION_GAP);
 
-            if (processed.has(memberId)) {
-              return;
-            }
+        const branchWidth = getUnitWidth(unit);
 
-            const spousePair = spousePairs.find(
-              (pair) =>
-                Number(pair.memberOneId) === memberId ||
-                Number(pair.memberTwoId) === memberId,
-            );
+        /*
+         * ------------------------------------------------------
+         * POSITION MEMBERS OF THE FAMILY UNIT
+         * ------------------------------------------------------
+         */
 
-            if (spousePair) {
-              const spouseId =
-                Number(spousePair.memberOneId) === memberId
-                  ? Number(spousePair.memberTwoId)
-                  : Number(spousePair.memberOneId);
+        const ownWidth = getOwnUnitWidth(unit);
 
-              const spouse = group.find((item) => Number(item.id) === spouseId);
+        const ownStartX = centerX - ownWidth / 2;
 
-              if (spouse) {
-                units.push({
-                  members: [member, spouse],
-                });
+        unit.members.forEach((member, index) => {
+          const id = numberId(member.id);
 
-                processed.add(memberId);
+          let x = ownStartX;
 
-                processed.add(spouseId);
+          if (unit.members.length === 2 && index === 1) {
+            x += NODE_WIDTH + SPOUSE_GAP;
+          }
 
-                return;
-              }
-            }
+          generatedNodes.push({
+            id: normalizeId(id),
 
-            units.push({
-              members: [member],
-            });
+            type: "familyNode",
 
-            processed.add(memberId);
-          });
+            position: {
+              x,
+              y,
+            },
 
-          /*
-           * Calculate width.
-           */
+            data: {
+              id: member.id,
 
-          let totalWidth = 0;
+              label: member.fullName,
 
-          units.forEach((unit) => {
-            totalWidth += unit.members.length * NODE_WIDTH;
+              occupation: member.occupation,
 
-            totalWidth += (unit.members.length - 1) * 35;
+              imagePath: member.imagePath,
 
-            totalWidth += HORIZONTAL_GAP;
-          });
+              biography: member.biography,
 
-          let currentX = -totalWidth / 2;
+              gender: member.gender,
 
-          units.forEach((unit) => {
-            unit.members.forEach((member) => {
-              const memberId = Number(member.id);
+              dateOfBirth: member.dateOfBirth,
+            },
 
-              const hasSavedPosition =
-                member.positionX !== null &&
-                member.positionX !== undefined &&
-                member.positionY !== null &&
-                member.positionY !== undefined;
-
-              const defaultX = currentX;
-
-              const defaultY =
-                180 + Number(generation) * (NODE_HEIGHT + GENERATION_GAP);
-
-              generatedNodes.push({
-                id: memberId.toString(),
-
-                type: "familyNode",
-
-                position: {
-                  x: hasSavedPosition ? Number(member.positionX) : defaultX,
-
-                  y: hasSavedPosition ? Number(member.positionY) : defaultY,
-                },
-
-                data: {
-                  id: member.id,
-
-                  label: member.fullName,
-
-                  occupation: member.occupation,
-
-                  imagePath: member.imagePath,
-
-                  biography: member.biography,
-
-                  gender: member.gender,
-
-                  dateOfBirth: member.dateOfBirth,
-                },
-
-                draggable: true,
-              });
-
-              currentX += NODE_WIDTH + HORIZONTAL_GAP;
-            });
+            draggable: true,
           });
         });
 
+        /*
+         * ------------------------------------------------------
+         * POSITION CHILD FAMILY UNITS
+         * ------------------------------------------------------
+         *
+         * Children are placed directly underneath this family
+         * unit.
+         * ------------------------------------------------------
+         */
+
+        if (!unit.childUnitIds || unit.childUnitIds.length === 0) {
+          return;
+        }
+
+        /*
+         * Calculate total child width.
+         */
+
+        let totalChildrenWidth = 0;
+
+        unit.childUnitIds.forEach((childUnitId) => {
+          const childUnit = familyUnits.find((item) => item.id === childUnitId);
+
+          if (!childUnit) {
+            return;
+          }
+
+          totalChildrenWidth += getUnitWidth(childUnit);
+        });
+
+        totalChildrenWidth +=
+          Math.max(0, unit.childUnitIds.length - 1) * FAMILY_GAP;
+
+        /*
+         * Children are centered underneath the parents.
+         */
+
+        let childStartX = centerX - totalChildrenWidth / 2;
+
+        unit.childUnitIds.forEach((childUnitId) => {
+          const childUnit = familyUnits.find((item) => item.id === childUnitId);
+
+          if (!childUnit) {
+            return;
+          }
+
+          const childWidth = getUnitWidth(childUnit);
+
+          const childCenter = childStartX + childWidth / 2;
+
+          positionFamilyUnit(childUnit, childCenter);
+
+          childStartX += childWidth + FAMILY_GAP;
+        });
+      };
+
       /*
        * ========================================================
-       * EDGES
+       * POSITION ROOT BRANCHES
+       * ========================================================
+       */
+
+      let rootTotalWidth = 0;
+
+      rootUnits.forEach((unit) => {
+        rootTotalWidth += getUnitWidth(unit);
+      });
+
+      rootTotalWidth += Math.max(0, rootUnits.length - 1) * FAMILY_GAP;
+
+      let rootStartX = -rootTotalWidth / 2;
+
+      rootUnits.forEach((unit) => {
+        const unitWidth = getUnitWidth(unit);
+
+        const centerX = rootStartX + unitWidth / 2;
+
+        positionFamilyUnit(unit, centerX);
+
+        rootStartX += unitWidth + FAMILY_GAP;
+      });
+
+      /*
+       * ========================================================
+       * HANDLE DISCONNECTED MEMBERS
+       * ========================================================
+       *
+       * If a member has no relationship at all, they still need
+       * to appear in the tree.
+       * ========================================================
+       */
+
+      familyUnits.forEach((unit) => {
+        if (positionedUnits.has(unit.id)) {
+          return;
+        }
+
+        const generation = generationMap[unit.id] ?? 0;
+
+        const y = 150 + generation * (NODE_HEIGHT + GENERATION_GAP);
+
+        const width = getUnitWidth(unit);
+
+        /*
+         * Place disconnected units farther to the right.
+         */
+
+        const existingMemberNodes = generatedNodes.filter(
+          (node) => node.type === "familyNode",
+        );
+
+        let xOffset = existingMemberNodes.length * (NODE_WIDTH + FAMILY_GAP);
+
+        xOffset += 500;
+
+        const centerX = xOffset + width / 2;
+
+        positionFamilyUnit(unit, centerX);
+      });
+
+      /*
+       * ========================================================
+       * CREATE EDGES
        * ========================================================
        */
 
@@ -868,45 +957,18 @@ function FamilyTree() {
 
       /*
        * ========================================================
-       * FAMILY ROOT CONNECTION
-       *
-       * Only ONE spouse receives the root connection.
+       * FAMILY ROOT → ROOT FAMILY UNIT
        * ========================================================
        */
 
-      const rootGeneration = generationGroups[0] || [];
-
-      const rootProcessed = new Set();
-
-      rootGeneration.forEach((member) => {
-        const memberId = Number(member.id);
-
-        if (rootProcessed.has(memberId)) {
+      rootUnits.forEach((unit, index) => {
+        if (!unit.members.length) {
           return;
         }
 
-        const spousePair = spousePairs.find(
-          (pair) =>
-            Number(pair.memberOneId) === memberId ||
-            Number(pair.memberTwoId) === memberId,
-        );
+        const firstMember = unit.members[0];
 
-        let targetId = memberId;
-
-        if (spousePair) {
-          const spouseId =
-            Number(spousePair.memberOneId) === memberId
-              ? Number(spousePair.memberTwoId)
-              : Number(spousePair.memberOneId);
-
-          targetId = Math.min(memberId, spouseId);
-
-          rootProcessed.add(spouseId);
-        }
-
-        rootProcessed.add(memberId);
-
-        const key = `family-${family.id}-${targetId}`;
+        const key = `family-root-${family.id}-${index}`;
 
         if (edgeKeys.has(key)) {
           return;
@@ -919,71 +981,49 @@ function FamilyTree() {
 
           source: `family-${family.id}`,
 
-          target: targetId.toString(),
+          target: normalizeId(firstMember.id),
 
           type: "smoothstep",
 
-          className: "family-root-edge",
-
           style: {
-            stroke: "rgba(105,128,76,0.75)",
+            stroke: "#a7b59f",
 
-            strokeWidth: 2.5,
+            strokeWidth: 2,
+          },
 
-            strokeDasharray: "6 5",
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+
+            color: "#a7b59f",
+
+            width: 12,
+
+            height: 12,
           },
         });
       });
 
       /*
        * ========================================================
-       * ALL RELATIONSHIP EDGES
+       * SPOUSE EDGES
+       * ========================================================
+       *
+       * Husband ───────── Wife
+       *
+       * No arrow.
        * ========================================================
        */
 
-      relationships.forEach((relationship) => {
-        if (!relationship.memberOne || !relationship.memberTwo) {
-          return;
-        }
+      spouseRelations.forEach((pair) => {
+        const id1 = numberId(pair.memberOneId);
 
-        const type = relationship.relationshipType || "Other";
+        const id2 = numberId(pair.memberTwoId);
 
-        /*
-         * ----------------------------------------------------
-         * SOURCE / TARGET
-         * ----------------------------------------------------
-         */
+        const smaller = Math.min(id1, id2);
 
-        let sourceId = Number(relationship.memberOne.id);
+        const larger = Math.max(id1, id2);
 
-        let targetId = Number(relationship.memberTwo.id);
-
-        /*
-         * Son / Daughter are stored in the
-         * reverse semantic direction.
-         *
-         * Convert:
-         *
-         * Son → Parent
-         *
-         * into:
-         *
-         * Parent → Son
-         */
-
-        if (isChildRelationship(type)) {
-          sourceId = Number(relationship.memberTwo.id);
-
-          targetId = Number(relationship.memberOne.id);
-        }
-
-        /*
-         * ----------------------------------------------------
-         * DUPLICATE KEY
-         * ----------------------------------------------------
-         */
-
-        const key = `relationship-${relationship.id}`;
+        const key = `spouse-${smaller}-${larger}`;
 
         if (edgeKeys.has(key)) {
           return;
@@ -991,146 +1031,366 @@ function FamilyTree() {
 
         edgeKeys.add(key);
 
-        /*
-         * ----------------------------------------------------
-         * VISUAL CONFIG
-         * ----------------------------------------------------
-         */
-
-        const visual = relationshipVisuals[type] || relationshipVisuals.Other;
-
-        /*
-         * ----------------------------------------------------
-         * EDGE
-         * ----------------------------------------------------
-         */
-
         generatedEdges.push({
           id: key,
 
-          source: sourceId.toString(),
+          source: normalizeId(smaller),
 
-          target: targetId.toString(),
+          target: normalizeId(larger),
 
-          label: type,
-
-          type: "smoothstep",
-
-          animated: true,
-
-          className: `${visual.className} relationship-edge`,
+          type: "straight",
 
           style: {
-            stroke: visual.color,
+            stroke: "#8a948d",
 
-            strokeWidth: isSpouseRelationship(type) ? 3 : 2.5,
-
-            strokeDasharray: isSpouseRelationship(type) ? "8 5" : "10 6",
-
-            strokeLinecap: "round",
+            strokeWidth: 3,
           },
-
-          labelStyle: {
-            fill: visual.labelColor,
-
-            fontWeight: "800",
-
-            fontSize: 10,
-          },
-
-          labelBgStyle: {
-            fill: visual.background,
-
-            fillOpacity: 0.96,
-          },
-
-          markerEnd: isSpouseRelationship(type)
-            ? undefined
-            : {
-                type: MarkerType.ArrowClosed,
-
-                color: visual.color,
-
-                width: 16,
-
-                height: 16,
-              },
         });
       });
 
       /*
        * ========================================================
-       * UPDATE TREE
+       * PARENT → CHILD CONNECTIONS
+       * ========================================================
+       *
+       * Example:
+       *
+       *        Father ─── Mother
+       *               │
+       *               ●
+       *             ┌─┴─┐
+       *             ↓   ↓
+       *           Son Daughter
+       *
+       * This is generated per FAMILY UNIT rather than globally
+       * by generation.
        * ========================================================
        */
 
-      setNodes(generatedNodes);
+      familyUnits.forEach((parentUnit) => {
+        if (!parentUnit.childUnitIds || parentUnit.childUnitIds.length === 0) {
+          return;
+        }
 
+        /*
+         * Find parent nodes.
+         */
+
+        const parentNodes = parentUnit.memberIds
+          .map((id) =>
+            generatedNodes.find((node) => node.id === normalizeId(id)),
+          )
+          .filter(Boolean);
+
+        if (!parentNodes.length) {
+          return;
+        }
+
+        /*
+         * Parent center.
+         */
+
+        const parentCenterX =
+          parentNodes.reduce(
+            (sum, node) => sum + node.position.x + NODE_WIDTH / 2,
+            0,
+          ) / parentNodes.length;
+
+        /*
+         * Parent bottom.
+         */
+
+        const parentBottomY = Math.max(
+          ...parentNodes.map((node) => node.position.y + NODE_HEIGHT),
+        );
+
+        /*
+         * Child nodes.
+         */
+
+        const childNodes = [];
+
+        parentUnit.childUnitIds.forEach((childUnitId) => {
+          const childUnit = familyUnits.find((unit) => unit.id === childUnitId);
+
+          if (!childUnit) {
+            return;
+          }
+
+          /*
+           * Use the center of the child family unit.
+           */
+
+          const firstChild = generatedNodes.find(
+            (node) => node.id === normalizeId(childUnit.memberIds[0]),
+          );
+
+          if (!firstChild) {
+            return;
+          }
+
+          let childUnitWidth = getOwnUnitWidth(childUnit);
+
+          /*
+           * If the child has its own descendants,
+           * its visual center is still based on the
+           * family unit width.
+           */
+
+          childUnitWidth = Math.max(childUnitWidth, getUnitWidth(childUnit));
+
+          const childCenterX = firstChild.position.x + childUnitWidth / 2;
+
+          childNodes.push({
+            childUnit,
+            firstChild,
+            childCenterX,
+          });
+        });
+
+        if (!childNodes.length) {
+          return;
+        }
+
+        /*
+         * ------------------------------------------------------
+         * FAMILY JUNCTION
+         * ------------------------------------------------------
+         */
+
+        const junctionY = parentBottomY + GENERATION_GAP / 2;
+
+        const junctionId = `junction-${parentUnit.id}`;
+
+        /*
+         * Invisible junction.
+         */
+
+        generatedNodes.push({
+          id: junctionId,
+
+          type: "default",
+
+          position: {
+            x: parentCenterX - JUNCTION_SIZE / 2,
+
+            y: junctionY - JUNCTION_SIZE / 2,
+          },
+
+          data: {
+            label: "",
+          },
+
+          draggable: false,
+
+          selectable: false,
+
+          connectable: false,
+
+          style: {
+            width: JUNCTION_SIZE,
+
+            height: JUNCTION_SIZE,
+
+            padding: 0,
+
+            border: "none",
+
+            background: "transparent",
+
+            opacity: 0,
+          },
+        });
+
+        /*
+         * ------------------------------------------------------
+         * PARENT → JUNCTION
+         * ------------------------------------------------------
+         */
+
+        parentUnit.memberIds.forEach((parentId) => {
+          const key = `parent-${parentId}-${junctionId}`;
+
+          if (edgeKeys.has(key)) {
+            return;
+          }
+
+          edgeKeys.add(key);
+
+          generatedEdges.push({
+            id: key,
+
+            source: normalizeId(parentId),
+
+            target: junctionId,
+
+            type: "smoothstep",
+
+            style: {
+              stroke: "#9aa89a",
+
+              strokeWidth: 2.5,
+            },
+          });
+        });
+
+        /*
+         * ------------------------------------------------------
+         * JUNCTION → CHILDREN
+         * ------------------------------------------------------
+         */
+
+        childNodes.forEach(({ childUnit, firstChild, childCenterX }) => {
+          const childId = firstChild.id;
+
+          const key = `child-${parentUnit.id}-${childUnit.id}`;
+
+          if (edgeKeys.has(key)) {
+            return;
+          }
+
+          edgeKeys.add(key);
+
+          generatedEdges.push({
+            id: key,
+
+            source: junctionId,
+
+            target: childId,
+
+            type: "smoothstep",
+
+            style: {
+              stroke: "#9aa89a",
+
+              strokeWidth: 2.5,
+            },
+
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+
+              color: "#9aa89a",
+
+              width: 12,
+
+              height: 12,
+            },
+          });
+        });
+      });
+
+      /*
+       * ========================================================
+       * SET TREE
+       * ========================================================
+       */
+
+      /*
+       * ========================================================
+       * CALCULATE COMPLETE TREE BOUNDS
+       * ========================================================
+       */
+
+      const TREE_PADDING = 120;
+
+      const getNodeWidth = (node) => {
+        if (node.id.startsWith("family-")) return FAMILY_ROOT_WIDTH;
+        if (node.id.startsWith("junction-")) return JUNCTION_SIZE;
+        return NODE_WIDTH;
+      };
+
+      const getNodeHeight = (node) => {
+        if (node.id.startsWith("family-")) return 64;
+        if (node.id.startsWith("junction-")) return JUNCTION_SIZE;
+        return NODE_HEIGHT;
+      };
+
+      const boundsNodes = generatedNodes.filter(
+        (node) => !node.id.startsWith("junction-"),
+      );
+
+      const nodesForBounds = boundsNodes.length ? boundsNodes : generatedNodes;
+
+      const minX = Math.min(
+        ...nodesForBounds.map((node) => Number(node.position?.x || 0)),
+      );
+
+      const minY = Math.min(
+        ...nodesForBounds.map((node) => Number(node.position?.y || 0)),
+      );
+
+      const maxX = Math.max(
+        ...nodesForBounds.map(
+          (node) => Number(node.position?.x || 0) + getNodeWidth(node),
+        ),
+      );
+
+      const maxY = Math.max(
+        ...nodesForBounds.map(
+          (node) => Number(node.position?.y || 0) + getNodeHeight(node),
+        ),
+      );
+
+      // Normalize coordinates so the complete tree has safe padding on all sides.
+      const shiftX = TREE_PADDING - minX;
+      const shiftY = TREE_PADDING - minY;
+
+      const normalizedNodes = generatedNodes.map((node) => ({
+        ...node,
+        position: {
+          x: Number(node.position?.x || 0) + shiftX,
+          y: Number(node.position?.y || 0) + shiftY,
+        },
+      }));
+
+      const completeTreeWidth = Math.max(
+        900,
+        Math.ceil(maxX - minX + TREE_PADDING * 2),
+      );
+
+      const completeTreeHeight = Math.max(
+        700,
+        Math.ceil(maxY - minY + TREE_PADDING * 2),
+      );
+
+      console.log("Generated Nodes:", normalizedNodes);
+      console.log("Generated Edges:", generatedEdges);
+      console.log("Complete Tree Size:", {
+        width: completeTreeWidth,
+        height: completeTreeHeight,
+      });
+
+      setTreeSize({
+        width: completeTreeWidth,
+        height: completeTreeHeight,
+      });
+
+      setNodes(normalizedNodes);
       setEdges(generatedEdges);
     } catch (error) {
-      console.log("Unable to load family tree:", error);
+      console.error("Unable to load family tree:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   /*
-   * ==========================================================
-   * HOVER
-   * ==========================================================
-   */
-
-  const onNodeMouseEnter = (event, node) => {
-    if (node.id.startsWith("family-")) {
-      return;
-    }
-
-    setHoveredMemberId(Number(node.id));
-  };
-
-  const onNodeMouseLeave = () => {
-    setHoveredMemberId(null);
-  };
-
-  /*
-   * ==========================================================
-   * CLICK MEMBER
-   * ==========================================================
-   */
-
-  const onNodeClick = (event, node) => {
-    if (node.id.startsWith("family-")) {
-      return;
-    }
-
-    const id = Number(node.id);
-
-    setSelectedMemberId((current) => (current === id ? null : id));
-  };
-
-  /*
-   * ==========================================================
-   * CLICK CANVAS
-   * ==========================================================
-   */
-
-  const onPaneClick = () => {
-    setSelectedMemberId(null);
-
-    setHoveredMemberId(null);
-  };
-
-  /*
-   * ==========================================================
-   * DRAG SAVE
-   * ==========================================================
+   * ============================================================
+   * SAVE DRAGGED POSITION
+   * ============================================================
    */
 
   const onNodeDragStop = async (event, node) => {
-    if (node.id.startsWith("family-")) {
+    /*
+     * Don't save helper nodes.
+     */
+
+    if (node.id.startsWith("family-") || node.id.startsWith("junction-")) {
       return;
     }
 
     /*
-     * Update local position immediately.
+     * Update UI immediately.
      */
 
     setNodes((currentNodes) =>
@@ -1150,7 +1410,7 @@ function FamilyTree() {
     );
 
     /*
-     * Persist position.
+     * Save position to backend.
      */
 
     try {
@@ -1160,162 +1420,187 @@ function FamilyTree() {
         positionY: node.position.y,
       });
 
-      console.log("Position saved:", node.id, node.position);
+      console.log(`Position saved for member ${node.id}`, node.position);
     } catch (error) {
-      console.log("Unable to save position:", error);
+      console.error("Unable to save member position:", error);
     }
   };
 
   /*
-   * ==========================================================
+   * ============================================================
+   * LOADING
+   * ============================================================
+   */
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          width: "100%",
+
+          height: "900px",
+
+          marginTop: "20px",
+
+          borderRadius: "22px",
+
+          display: "flex",
+
+          alignItems: "center",
+
+          justifyContent: "center",
+
+          flexDirection: "column",
+
+          gap: "16px",
+
+          background: "linear-gradient(135deg, #fbfdf9, #f3f7f1)",
+
+          border: "1px solid #dfe8dc",
+
+          color: "#52604f",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "52px",
+          }}
+        >
+          🌳
+        </div>
+
+        <div
+          style={{
+            fontSize: "18px",
+
+            fontWeight: "700",
+          }}
+        >
+          Growing your family tree...
+        </div>
+
+        <div
+          style={{
+            fontSize: "14px",
+
+            color: "#7a8577",
+          }}
+        >
+          Connecting your family generations
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * ============================================================
    * RENDER
-   * ==========================================================
+   * ============================================================
    */
 
   return (
-    <div className="family-tree-page">
-      {/* ======================================================
-          HEADER
-          ====================================================== */}
-
-      <div className="family-tree-heading">
-        <div className="family-tree-heading-icon">🌳</div>
-
-        <div>
-          <span className="family-tree-eyebrow">YOUR FAMILY STORY</span>
-
-          <h1>Family Tree</h1>
-
-          <p>
-            Explore the people, relationships and generations that connect your
-            family.
-          </p>
-        </div>
-      </div>
-
-      {/* ======================================================
-          TREE SCENE
-          ====================================================== */}
-
+    <div
+      className="family-tree-viewport"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        marginTop: "20px",
+        overflowX: "auto",
+        overflowY: "auto",
+        borderRadius: "22px",
+        border: "1px solid rgba(120, 140, 115, 0.25)",
+        background: "linear-gradient(135deg, #eef5ed 0%, #e7efe6 100%)",
+        boxShadow: "0 15px 45px rgba(70, 90, 65, 0.10)",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
       <div
-        className={`family-tree-scene ${
-          activeMemberId !== null ? "tree-has-active-member" : ""
-        }`}
+        className="family-tree-wrapper"
+        data-tree-export="family-tree"
+        style={{
+          width: `${treeSize.width}px`,
+          minWidth: `${treeSize.width}px`,
+          height: `${treeSize.height}px`,
+          minHeight: `${treeSize.height}px`,
+          borderRadius: "22px",
+          overflow: "hidden",
+          border: "1px solid rgba(120, 140, 115, 0.25)",
+          background: "linear-gradient(135deg, #fbfdf9 0%, #f4f8f2 100%)",
+          boxShadow: "0 15px 45px rgba(70, 90, 65, 0.10)",
+        }}
       >
-        {/* Atmospheric glows */}
-
-        <div className="tree-scene-glow tree-glow-one"></div>
-
-        <div className="tree-scene-glow tree-glow-two"></div>
-
-        <div className="tree-scene-glow tree-glow-three"></div>
-
-        {/* Floating particles */}
-
-        <div className="tree-particles">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-
-        {/* ====================================================
-            REACT FLOW
-            ==================================================== */}
-
         <ReactFlow
-          nodes={displayNodes}
-          edges={displayEdges}
+          nodes={nodes}
+          edges={edges}
           nodeTypes={nodeTypes}
+          onInit={onReactFlowInit}
           nodesDraggable={true}
-          nodesConnectable={false}
-          elementsSelectable={true}
-          panOnDrag={true}
-          zoomOnScroll={true}
-          zoomOnPinch={true}
-          zoomOnDoubleClick={false}
           onNodeDragStop={onNodeDragStop}
-          onNodeMouseEnter={onNodeMouseEnter}
-          onNodeMouseLeave={onNodeMouseLeave}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
           fitView
           fitViewOptions={{
-            padding: 0.25,
+            padding: 0.08,
 
-            minZoom: 0.45,
+            minZoom: 0.18,
 
-            maxZoom: 1.15,
+            maxZoom: 1.2,
+          }}
+          defaultEdgeOptions={{
+            type: "smoothstep",
+
+            style: {
+              stroke: "#9aa89a",
+
+              strokeWidth: 2,
+            },
+          }}
+          proOptions={{
+            hideAttribution: false,
           }}
         >
-          <Background color="rgba(113,135,82,0.16)" gap={32} size={1} />
+          <Background color="#d8e2d4" gap={28} size={1} />
 
           <Controls
-            showInteractive={false}
-            className="cinematic-tree-controls"
+            style={{
+              borderRadius: "12px",
+
+              overflow: "hidden",
+
+              boxShadow: "0 5px 18px rgba(50,70,45,0.12)",
+            }}
           />
 
           <MiniMap
             nodeColor={(node) => {
               if (node.id.startsWith("family-")) {
-                return "#789456";
+                return "#a5b89c";
               }
 
-              if (
-                activeMemberId !== null &&
-                highlightedData.nodeIds.has(node.id)
-              ) {
-                return "#8fa96b";
+              if (node.id.startsWith("junction-")) {
+                return "transparent";
               }
 
-              return "#c5d0b5";
+              const gender = node.data?.gender;
+
+              if (String(gender).toLowerCase() === "female") {
+                return "#e8b8c7";
+              }
+
+              if (String(gender).toLowerCase() === "male") {
+                return "#a9c9e8";
+              }
+
+              return "#cbd5c6";
             }}
-            maskColor="rgba(226,232,216,0.65)"
-            className="cinematic-tree-minimap"
-            pannable={true}
-            zoomable={true}
+            maskColor="rgba(240,245,238,0.72)"
+            style={{
+              borderRadius: "14px",
+
+              overflow: "hidden",
+
+              boxShadow: "0 5px 18px rgba(50,70,45,0.10)",
+            }}
           />
         </ReactFlow>
-
-        {/* ====================================================
-            ACTIVE RELATIONSHIP INDICATOR
-            ==================================================== */}
-
-        {activeMemberId !== null && (
-          <div className="tree-active-indicator">
-            <span className="active-indicator-star">✦</span>
-
-            <span>Family connections highlighted</span>
-
-            <button
-              onClick={() => {
-                setSelectedMemberId(null);
-
-                setHoveredMemberId(null);
-              }}
-            >
-              Clear
-            </button>
-          </div>
-        )}
-
-        {/* ====================================================
-            NORMAL INSTRUCTION
-            ==================================================== */}
-
-        {activeMemberId === null && (
-          <div className="tree-scene-label">
-            <span className="scene-label-icon">✦</span>
-
-            <span>Hover over a member to explore their family connections</span>
-          </div>
-        )}
       </div>
     </div>
   );

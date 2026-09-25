@@ -1,57 +1,43 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import "./RelationshipsPage.css";
 
 function RelationshipsPage() {
+  const navigate = useNavigate();
+
+  // ============================================================
+  // STATE
+  // ============================================================
+
   const [members, setMembers] = useState([]);
   const [relationships, setRelationships] = useState([]);
   const [family, setFamily] = useState(null);
 
-  const [customRelationship, setCustomRelationship] = useState("");
-  const [editingRelationship, setEditingRelationship] = useState(null);
+  const [isFamilyOwner, setIsFamilyOwner] = useState(false);
+  const [membersCanManageMembers, setMembersCanManageMembers] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [editingRelationship, setEditingRelationship] = useState(null);
 
   /*
-   * ============================================================
-   * RECIPROCAL RELATIONSHIP SUGGESTION
-   * ============================================================
+   * Suggested reverse relationship.
+   *
+   * Example:
+   *
+   * Ravi -> Father -> Priya
+   *
+   * Suggest:
+   *
+   * Priya -> Daughter -> Ravi
    */
-
-  const [reciprocalSuggestion, setReciprocalSuggestion] = useState(null);
-
-  const relationshipTypes = [
-    "Father",
-    "Mother",
-
-    "Husband",
-    "Wife",
-
-    "Son",
-    "Daughter",
-
-    "Brother",
-    "Sister",
-
-    "Grandfather",
-    "Grandmother",
-
-    "Grandson",
-    "Granddaughter",
-
-    "Uncle",
-    "Aunt",
-
-    "Nephew",
-    "Niece",
-
-    "Cousin",
-
-    "Other",
-  ];
+  const [relationshipSuggestion, setRelationshipSuggestion] = useState(null);
 
   const [formData, setFormData] = useState({
     memberOneId: "",
@@ -59,94 +45,142 @@ function RelationshipsPage() {
     memberTwoId: "",
   });
 
-  /*
-   * ============================================================
-   * LOAD DATA
-   * ============================================================
-   */
+  const [customRelationship, setCustomRelationship] = useState("");
+
+  const canManageRelationships = isFamilyOwner || membersCanManageMembers;
+
+  // ============================================================
+  // RELATIONSHIP TYPES
+  // ============================================================
+
+  const relationshipTypes = [
+    "Father",
+    "Mother",
+    "Husband",
+    "Wife",
+    "Son",
+    "Daughter",
+    "Brother",
+    "Sister",
+    "Grandfather",
+    "Grandmother",
+    "Grandson",
+    "Granddaughter",
+    "Uncle",
+    "Aunt",
+    "Nephew",
+    "Niece",
+    "Cousin",
+    "Other",
+  ];
+
+  // ============================================================
+  // INITIAL LOAD
+  // ============================================================
 
   useEffect(() => {
-    loadPageData();
+    loadPage();
   }, []);
 
-  const loadPageData = async () => {
+  // ============================================================
+  // LOAD PAGE
+  // ============================================================
+
+  const loadPage = async () => {
     setLoading(true);
 
-    await Promise.all([fetchFamily(), fetchMembers(), fetchRelationships()]);
+    await Promise.all([
+      fetchFamily(),
+      fetchMembers(),
+      fetchRelationships(),
+      fetchFamilySettings(),
+    ]);
 
     setLoading(false);
   };
 
-  /*
-   * ============================================================
-   * GET CURRENT FAMILY
-   * ============================================================
-   */
+  // ============================================================
+  // FETCH FAMILY
+  // ============================================================
 
   const fetchFamily = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:8080/api/families/current",
-      );
-
+      const response = await api.get("/api/families/current");
       setFamily(response.data);
     } catch (error) {
-      console.log("Family loading error:", error);
-
-      setErrorMessage("Unable to load the current family.");
+      console.error("Family loading error:", error);
     }
   };
 
-  /*
-   * ============================================================
-   * GET CURRENT FAMILY MEMBERS
-   * ============================================================
-   */
+  // ============================================================
+  // FETCH MEMBERS
+  // ============================================================
 
   const fetchMembers = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/members");
+      const response = await api.get("/api/members");
 
-      setMembers(response.data);
+      setMembers(response.data || []);
     } catch (error) {
-      console.log("Members loading error:", error);
+      console.error("Members loading error:", error);
 
-      setErrorMessage("Unable to load family members.");
+      setErrorMessage(
+        error.response?.data?.message || "Unable to load family members.",
+      );
     }
   };
 
-  /*
-   * ============================================================
-   * GET CURRENT FAMILY RELATIONSHIPS
-   * ============================================================
-   */
+  // ============================================================
+  // FETCH RELATIONSHIPS
+  // ============================================================
 
   const fetchRelationships = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:8080/api/relationships",
-      );
+      const response = await api.get("/api/relationships");
 
-      console.log("Relationships received:", response.data);
-
-      setRelationships(response.data);
+      setRelationships(response.data || []);
     } catch (error) {
-      console.log("Relationships loading error:", error);
+      console.error("Relationships loading error:", error);
 
       setRelationships([]);
 
-      setErrorMessage("Unable to load relationships.");
+      setErrorMessage(
+        error.response?.data?.message || "Unable to load relationships.",
+      );
     }
   };
 
-  /*
-   * ============================================================
-   * FORM CHANGE
-   * ============================================================
-   */
+  // ============================================================
+  // FETCH FAMILY SETTINGS
+  // ============================================================
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const fetchFamilySettings = async () => {
+    try {
+      setSettingsLoading(true);
+
+      const response = await api.get("/api/families/settings");
+
+      setIsFamilyOwner(response.data?.isFamilyOwner === true);
+
+      setMembersCanManageMembers(
+        response.data?.membersCanManageMembers === true,
+      );
+    } catch (error) {
+      console.error("Family settings loading error:", error);
+
+      setIsFamilyOwner(false);
+      setMembersCanManageMembers(false);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // FORM CHANGE
+  // ============================================================
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
     setFormData((previous) => ({
       ...previous,
@@ -155,17 +189,12 @@ function RelationshipsPage() {
 
     setErrorMessage("");
     setSuccessMessage("");
-
-    if (name === "relationshipType" && value !== "Other") {
-      setCustomRelationship("");
-    }
+    setRelationshipSuggestion(null);
   };
 
-  /*
-   * ============================================================
-   * RESET FORM
-   * ============================================================
-   */
+  // ============================================================
+  // RESET FORM
+  // ============================================================
 
   const resetForm = () => {
     setFormData({
@@ -179,24 +208,55 @@ function RelationshipsPage() {
     setErrorMessage("");
   };
 
-  /*
-   * ============================================================
-   * VALIDATE FORM
-   * ============================================================
-   */
+  // ============================================================
+  // GET MEMBER
+  // ============================================================
+
+  const getMember = (id) => {
+    return members.find((member) => Number(member.id) === Number(id));
+  };
+
+  // ============================================================
+  // GET MEMBER NAME
+  // ============================================================
+
+  const getMemberName = (id) => {
+    const member = getMember(id);
+
+    return member?.fullName || "Unknown Member";
+  };
+
+  // ============================================================
+  // GET MEMBER GENDER
+  // ============================================================
+
+  const getMemberGender = (id) => {
+    const member = getMember(id);
+
+    return member?.gender?.toLowerCase() || "";
+  };
+
+  // ============================================================
+  // VALIDATE FORM
+  // ============================================================
 
   const validateForm = () => {
-    if (
-      !formData.memberOneId ||
-      !formData.memberTwoId ||
-      !formData.relationshipType
-    ) {
-      setErrorMessage("Please select both family members and a relationship.");
-
+    if (!formData.memberOneId) {
+      setErrorMessage("Please select Member 1.");
       return false;
     }
 
-    if (formData.memberOneId === formData.memberTwoId) {
+    if (!formData.relationshipType) {
+      setErrorMessage("Please select a relationship.");
+      return false;
+    }
+
+    if (!formData.memberTwoId) {
+      setErrorMessage("Please select Member 2.");
+      return false;
+    }
+
+    if (Number(formData.memberOneId) === Number(formData.memberTwoId)) {
       setErrorMessage(
         "A family member cannot have a relationship with themselves.",
       );
@@ -213,11 +273,9 @@ function RelationshipsPage() {
     return true;
   };
 
-  /*
-   * ============================================================
-   * GET FINAL RELATIONSHIP TYPE
-   * ============================================================
-   */
+  // ============================================================
+  // GET FINAL RELATIONSHIP TYPE
+  // ============================================================
 
   const getRelationshipType = () => {
     if (formData.relationshipType === "Other") {
@@ -227,217 +285,12 @@ function RelationshipsPage() {
     return formData.relationshipType;
   };
 
-  /*
-   * ============================================================
-   * GET MEMBER BY ID
-   * ============================================================
-   */
+  // ============================================================
+  // CHECK EXACT DUPLICATE
+  // ============================================================
 
-  const getMemberById = (id) => {
-    return members.find((member) => member.id === Number(id));
-  };
-
-  /*
-   * ============================================================
-   * GET GENDER
-   * ============================================================
-   */
-
-  const getGender = (member) => {
-    if (!member?.gender) {
-      return "";
-    }
-
-    return member.gender.toLowerCase();
-  };
-
-  /*
-   * ============================================================
-   * GET RECIPROCAL RELATIONSHIP
-   *
-   * Example:
-   *
-   * Father → child
-   *
-   * Child gender determines:
-   *
-   * male   → Son
-   * female → Daughter
-   *
-   * ============================================================
-   */
-
-  const getReciprocalRelationship = (
-    relationshipType,
-    memberOne,
-    memberTwo,
-  ) => {
-    const firstGender = getGender(memberOne);
-
-    const secondGender = getGender(memberTwo);
-
-    switch (relationshipType) {
-      /*
-       * Parent → Child
-       */
-
-      case "Father":
-      case "Mother":
-        if (secondGender === "male") {
-          return "Son";
-        }
-
-        if (secondGender === "female") {
-          return "Daughter";
-        }
-
-        return null;
-
-      /*
-       * Husband / Wife
-       */
-
-      case "Husband":
-        return "Wife";
-
-      case "Wife":
-        return "Husband";
-
-      /*
-       * Child → Parent
-       */
-
-      case "Son":
-      case "Daughter":
-        if (secondGender === "male") {
-          return "Son";
-        }
-
-        if (secondGender === "female") {
-          return "Daughter";
-        }
-
-        return null;
-
-      /*
-       * Brother / Sister
-       */
-
-      case "Brother":
-      case "Sister":
-        if (secondGender === "male") {
-          return "Brother";
-        }
-
-        if (secondGender === "female") {
-          return "Sister";
-        }
-
-        return null;
-
-      /*
-       * Grandparents
-       */
-
-      case "Grandfather":
-      case "Grandmother":
-        if (secondGender === "male") {
-          return "Grandson";
-        }
-
-        if (secondGender === "female") {
-          return "Granddaughter";
-        }
-
-        return null;
-
-      /*
-       * Grandchildren
-       */
-
-      case "Grandson":
-      case "Granddaughter":
-        if (secondGender === "male") {
-          return "Grandfather";
-        }
-
-        if (secondGender === "female") {
-          return "Grandmother";
-        }
-
-        return null;
-
-      /*
-       * Uncle / Aunt
-       */
-
-      case "Uncle":
-      case "Aunt":
-        if (secondGender === "male") {
-          return "Nephew";
-        }
-
-        if (secondGender === "female") {
-          return "Niece";
-        }
-
-        return null;
-
-      /*
-       * Nephew / Niece
-       */
-
-      case "Nephew":
-      case "Niece":
-        if (secondGender === "male") {
-          return "Uncle";
-        }
-
-        if (secondGender === "female") {
-          return "Aunt";
-        }
-
-        return null;
-
-      /*
-       * Cousin
-       */
-
-      case "Cousin":
-        return "Cousin";
-
-      /*
-       * Other
-       */
-
-      case "Other":
-      default:
-        return null;
-    }
-  };
-
-  /*
-   * ============================================================
-   * CHECK DUPLICATE RELATIONSHIP
-   *
-   * Only exact duplicates are blocked.
-   *
-   * Muniyappa → Husband → Pulamma
-   *
-   * and
-   *
-   * Pulamma → Wife → Muniyappa
-   *
-   * are both allowed.
-   * ============================================================
-   */
-
-  const isDuplicateRelationship = (
-    memberOneId,
-    relationshipType,
-    memberTwoId,
-  ) => {
-    const type = relationshipType.toLowerCase();
+  const isDuplicateRelationship = () => {
+    const relationshipType = getRelationshipType().trim().toLowerCase();
 
     return relationships.some((relationship) => {
       if (editingRelationship && relationship.id === editingRelationship.id) {
@@ -445,37 +298,283 @@ function RelationshipsPage() {
       }
 
       return (
-        relationship.memberOne?.id === Number(memberOneId) &&
-        relationship.memberTwo?.id === Number(memberTwoId) &&
-        relationship.relationshipType?.toLowerCase() === type
+        Number(relationship.memberOne?.id) === Number(formData.memberOneId) &&
+        Number(relationship.memberTwo?.id) === Number(formData.memberTwoId) &&
+        relationship.relationshipType?.trim().toLowerCase() === relationshipType
       );
     });
   };
 
-  /*
-   * ============================================================
-   * CREATE RELATIONSHIP
-   * ============================================================
-   */
+  // ============================================================
+  // CHECK WHETHER RELATIONSHIP EXISTS
+  // ============================================================
+
+  const relationshipExists = (memberOneId, memberTwoId, relationshipType) => {
+    return relationships.some((relationship) => {
+      return (
+        Number(relationship.memberOne?.id) === Number(memberOneId) &&
+        Number(relationship.memberTwo?.id) === Number(memberTwoId) &&
+        relationship.relationshipType?.trim().toLowerCase() ===
+          relationshipType.trim().toLowerCase()
+      );
+    });
+  };
+
+  // ============================================================
+  // GET GENDER-AWARE RECIPROCAL RELATIONSHIP
+  // ============================================================
+
+  const getReciprocalRelationship = (relationshipType, reverseMemberId) => {
+    const type = relationshipType?.trim().toLowerCase();
+
+    const reverseGender = getMemberGender(reverseMemberId);
+
+    /*
+     * ----------------------------------------------------------
+     * SPOUSE
+     * ----------------------------------------------------------
+     */
+
+    if (type === "husband") {
+      return "Wife";
+    }
+
+    if (type === "wife") {
+      return "Husband";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * PARENT -> CHILD
+     * ----------------------------------------------------------
+     *
+     * Father -> Son/Daughter
+     * Mother -> Son/Daughter
+     */
+
+    if (type === "father" || type === "mother") {
+      if (reverseGender === "female") {
+        return "Daughter";
+      }
+
+      return "Son";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * CHILD -> PARENT
+     * ----------------------------------------------------------
+     *
+     * Son/Daughter -> Father/Mother
+     */
+
+    if (type === "son" || type === "daughter") {
+      if (reverseGender === "female") {
+        return "Mother";
+      }
+
+      return "Father";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * SIBLINGS
+     * ----------------------------------------------------------
+     */
+
+    if (type === "brother" || type === "sister") {
+      if (reverseGender === "female") {
+        return "Sister";
+      }
+
+      return "Brother";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * GRANDPARENT -> GRANDCHILD
+     * ----------------------------------------------------------
+     */
+
+    if (type === "grandfather" || type === "grandmother") {
+      if (reverseGender === "female") {
+        return "Granddaughter";
+      }
+
+      return "Grandson";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * GRANDCHILD -> GRANDPARENT
+     * ----------------------------------------------------------
+     */
+
+    if (type === "grandson" || type === "granddaughter") {
+      if (reverseGender === "female") {
+        return "Grandmother";
+      }
+
+      return "Grandfather";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * UNCLE / AUNT -> NEPHEW / NIECE
+     * ----------------------------------------------------------
+     */
+
+    if (type === "uncle" || type === "aunt") {
+      if (reverseGender === "female") {
+        return "Niece";
+      }
+
+      return "Nephew";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * NEPHEW / NIECE -> UNCLE / AUNT
+     * ----------------------------------------------------------
+     */
+
+    if (type === "nephew" || type === "niece") {
+      if (reverseGender === "female") {
+        return "Aunt";
+      }
+
+      return "Uncle";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * COUSIN
+     * ----------------------------------------------------------
+     */
+
+    if (type === "cousin") {
+      return "Cousin";
+    }
+
+    /*
+     * ----------------------------------------------------------
+     * OTHER
+     * ----------------------------------------------------------
+     *
+     * We cannot mathematically know the inverse of a custom
+     * relationship, so we preserve the custom relationship and
+     * reverse the two members.
+     */
+
+    if (type === "other") {
+      return "Other";
+    }
+
+    /*
+     * Custom relationship entered by the user.
+     *
+     * Example:
+     *
+     * "Step Father"
+     *
+     * There is no reliable way to infer "Step Son" or
+     * "Step Daughter", so preserve the custom relationship.
+     */
+
+    return relationshipType;
+  };
+
+  // ============================================================
+  // CREATE RECIPROCAL SUGGESTION
+  // ============================================================
+
+  const createRelationshipSuggestion = (
+    relationshipType,
+    memberOneId,
+    memberTwoId,
+  ) => {
+    /*
+     * Reverse the members.
+     *
+     * Original:
+     *
+     * Member 1 -> Relationship -> Member 2
+     *
+     * Suggested:
+     *
+     * Member 2 -> Reverse Relationship -> Member 1
+     */
+
+    const reverseMemberOneId = Number(memberTwoId);
+    const reverseMemberTwoId = Number(memberOneId);
+
+    const inverseType = getReciprocalRelationship(
+      relationshipType,
+      reverseMemberOneId,
+    );
+
+    if (!inverseType) {
+      setRelationshipSuggestion(null);
+      return;
+    }
+
+    /*
+     * For custom "Other" relationships, keep the custom
+     * relationship text.
+     */
+    let finalInverseType = inverseType;
+
+    if (
+      relationshipType !== "Other" &&
+      !relationshipTypes.includes(inverseType)
+    ) {
+      finalInverseType = relationshipType;
+    }
+
+    /*
+     * Don't show the suggestion if the reverse relationship
+     * already exists.
+     */
+    if (
+      relationshipExists(
+        reverseMemberOneId,
+        reverseMemberTwoId,
+        finalInverseType,
+      )
+    ) {
+      setRelationshipSuggestion(null);
+      return;
+    }
+
+    setRelationshipSuggestion({
+      memberOneId: reverseMemberOneId,
+      memberTwoId: reverseMemberTwoId,
+      relationshipType: finalInverseType,
+    });
+  };
+
+  // ============================================================
+  // CREATE RELATIONSHIP
+  // ============================================================
 
   const createRelationship = async () => {
     setErrorMessage("");
     setSuccessMessage("");
-    setReciprocalSuggestion(null);
+    setRelationshipSuggestion(null);
+
+    if (!canManageRelationships) {
+      setErrorMessage(
+        "You do not have permission to manage family relationships.",
+      );
+
+      return;
+    }
 
     if (!validateForm()) {
       return;
     }
 
-    const relationshipType = getRelationshipType();
-
-    if (
-      isDuplicateRelationship(
-        formData.memberOneId,
-        relationshipType,
-        formData.memberTwoId,
-      )
-    ) {
+    if (isDuplicateRelationship()) {
       setErrorMessage("This exact relationship already exists.");
 
       return;
@@ -484,69 +583,52 @@ function RelationshipsPage() {
     try {
       setSaving(true);
 
-      const memberOne = getMemberById(formData.memberOneId);
+      const memberOneId = Number(formData.memberOneId);
 
-      const memberTwo = getMemberById(formData.memberTwoId);
+      const memberTwoId = Number(formData.memberTwoId);
+
+      const relationshipType = getRelationshipType();
 
       const requestBody = {
         relationshipType,
 
         memberOne: {
-          id: Number(formData.memberOneId),
+          id: memberOneId,
         },
 
         memberTwo: {
-          id: Number(formData.memberTwoId),
+          id: memberTwoId,
         },
       };
 
-      console.log("Creating relationship:", requestBody);
-
-      await axios.post("http://localhost:8080/api/relationships", requestBody);
+      await api.post("/api/relationships", requestBody);
 
       /*
-       * Determine reciprocal relationship
+       * Refresh relationships before creating the suggestion.
        */
-
-      const reciprocalType = getReciprocalRelationship(
-        relationshipType,
-        memberOne,
-        memberTwo,
-      );
-
-      /*
-       * Save suggestion BEFORE clearing
-       * the form.
-       */
-
-      if (
-        reciprocalType &&
-        !isDuplicateRelationship(
-          formData.memberTwoId,
-          reciprocalType,
-          formData.memberOneId,
-        )
-      ) {
-        setReciprocalSuggestion({
-          memberOneId: Number(formData.memberTwoId),
-
-          memberOneName: memberTwo?.fullName,
-
-          relationshipType: reciprocalType,
-
-          memberTwoId: Number(formData.memberOneId),
-
-          memberTwoName: memberOne?.fullName,
-        });
-      }
-
-      resetForm();
+      await fetchRelationships();
 
       setSuccessMessage("Relationship created successfully!");
 
-      await fetchRelationships();
+      /*
+       * Create reverse relationship suggestion
+       * for ALL supported relationship types.
+       */
+      createRelationshipSuggestion(relationshipType, memberOneId, memberTwoId);
+
+      resetForm();
     } catch (error) {
-      console.log("Create relationship error:", error);
+      console.error("Create relationship error:", error);
+
+      if (error.response?.status === 403) {
+        setErrorMessage(
+          "You do not have permission to manage family relationships.",
+        );
+
+        await fetchFamilySettings();
+
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.message || "Failed to create relationship.",
@@ -556,91 +638,112 @@ function RelationshipsPage() {
     }
   };
 
-  /*
-   * ============================================================
-   * ADD RECIPROCAL RELATIONSHIP
-   * ============================================================
-   */
+  // ============================================================
+  // CREATE SUGGESTED RELATIONSHIP
+  // ============================================================
 
-  const addReciprocalRelationship = async () => {
-    if (!reciprocalSuggestion) {
+  const createSuggestedRelationship = async () => {
+    if (!relationshipSuggestion) {
       return;
     }
 
     try {
       setSaving(true);
+
       setErrorMessage("");
+      setSuccessMessage("");
+
+      /*
+       * Check again before inserting.
+       */
+      const alreadyExists = relationshipExists(
+        relationshipSuggestion.memberOneId,
+        relationshipSuggestion.memberTwoId,
+        relationshipSuggestion.relationshipType,
+      );
+
+      if (alreadyExists) {
+        setRelationshipSuggestion(null);
+
+        setErrorMessage("This reverse relationship already exists.");
+
+        return;
+      }
 
       const requestBody = {
-        relationshipType: reciprocalSuggestion.relationshipType,
+        relationshipType: relationshipSuggestion.relationshipType,
 
         memberOne: {
-          id: reciprocalSuggestion.memberOneId,
+          id: relationshipSuggestion.memberOneId,
         },
 
         memberTwo: {
-          id: reciprocalSuggestion.memberTwoId,
+          id: relationshipSuggestion.memberTwoId,
         },
       };
 
-      await axios.post("http://localhost:8080/api/relationships", requestBody);
-
-      setReciprocalSuggestion(null);
-
-      setSuccessMessage(
-        "Both family relationships have been added successfully!",
-      );
+      await api.post("/api/relationships", requestBody);
 
       await fetchRelationships();
+
+      setSuccessMessage("Reverse relationship added successfully!");
+
+      setRelationshipSuggestion(null);
     } catch (error) {
-      console.log("Reciprocal relationship error:", error);
+      console.error("Create suggested relationship error:", error);
+
+      if (error.response?.status === 403) {
+        setErrorMessage(
+          "You do not have permission to manage family relationships.",
+        );
+
+        await fetchFamilySettings();
+
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.message ||
-          "Failed to add reciprocal relationship.",
+          "Failed to create the suggested relationship.",
       );
     } finally {
       setSaving(false);
     }
   };
 
-  /*
-   * ============================================================
-   * SKIP RECIPROCAL
-   * ============================================================
-   */
-
-  const skipReciprocalRelationship = () => {
-    setReciprocalSuggestion(null);
-  };
-
-  /*
-   * ============================================================
-   * START EDIT
-   * ============================================================
-   */
+  // ============================================================
+  // START EDIT
+  // ============================================================
 
   const startEdit = (relationship) => {
-    setReciprocalSuggestion(null);
+    if (!canManageRelationships) {
+      setErrorMessage(
+        "You do not have permission to manage family relationships.",
+      );
 
-    setEditingRelationship(relationship);
+      return;
+    }
 
     const isCustomRelationship = !relationshipTypes.includes(
       relationship.relationshipType,
     );
 
+    setEditingRelationship(relationship);
+
+    setRelationshipSuggestion(null);
+
     setFormData({
-      memberOneId: relationship.memberOne.id.toString(),
+      memberOneId: relationship.memberOne?.id?.toString() || "",
 
       relationshipType: isCustomRelationship
         ? "Other"
         : relationship.relationshipType,
 
-      memberTwoId: relationship.memberTwo.id.toString(),
+      memberTwoId: relationship.memberTwo?.id?.toString() || "",
     });
 
     if (isCustomRelationship) {
-      setCustomRelationship(relationship.relationshipType);
+      setCustomRelationship(relationship.relationshipType || "");
     } else {
       setCustomRelationship("");
     }
@@ -654,29 +757,34 @@ function RelationshipsPage() {
     });
   };
 
-  /*
-   * ============================================================
-   * UPDATE RELATIONSHIP
-   * ============================================================
-   */
+  // ============================================================
+  // UPDATE RELATIONSHIP
+  // ============================================================
 
   const updateRelationship = async () => {
     setErrorMessage("");
     setSuccessMessage("");
+    setRelationshipSuggestion(null);
+
+    if (!canManageRelationships) {
+      setErrorMessage(
+        "You do not have permission to manage family relationships.",
+      );
+
+      setEditingRelationship(null);
+
+      return;
+    }
+
+    if (!editingRelationship) {
+      return;
+    }
 
     if (!validateForm()) {
       return;
     }
 
-    const relationshipType = getRelationshipType();
-
-    if (
-      isDuplicateRelationship(
-        formData.memberOneId,
-        relationshipType,
-        formData.memberTwoId,
-      )
-    ) {
+    if (isDuplicateRelationship()) {
       setErrorMessage("This exact relationship already exists.");
 
       return;
@@ -686,7 +794,7 @@ function RelationshipsPage() {
       setSaving(true);
 
       const requestBody = {
-        relationshipType,
+        relationshipType: getRelationshipType(),
 
         memberOne: {
           id: Number(formData.memberOneId),
@@ -697,18 +805,30 @@ function RelationshipsPage() {
         },
       };
 
-      await axios.put(
-        `http://localhost:8080/api/relationships/${editingRelationship.id}`,
+      await api.put(
+        `/api/relationships/${editingRelationship.id}`,
         requestBody,
       );
 
-      resetForm();
-
       setSuccessMessage("Relationship updated successfully!");
+
+      resetForm();
 
       await fetchRelationships();
     } catch (error) {
-      console.log("Update relationship error:", error);
+      console.error("Update relationship error:", error);
+
+      if (error.response?.status === 403) {
+        setErrorMessage(
+          "You do not have permission to manage family relationships.",
+        );
+
+        await fetchFamilySettings();
+
+        setEditingRelationship(null);
+
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.message || "Failed to update relationship.",
@@ -718,438 +838,585 @@ function RelationshipsPage() {
     }
   };
 
-  /*
-   * ============================================================
-   * DELETE RELATIONSHIP
-   * ============================================================
-   */
+  // ============================================================
+  // DELETE RELATIONSHIP
+  // ============================================================
 
   const deleteRelationship = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this relationship?")) {
+    if (!canManageRelationships) {
+      setErrorMessage(
+        "You do not have permission to manage family relationships.",
+      );
+
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this relationship?",
+    );
+
+    if (!confirmed) {
       return;
     }
 
     try {
-      setErrorMessage("");
-      setSuccessMessage("");
+      setSaving(true);
 
-      await axios.delete(`http://localhost:8080/api/relationships/${id}`);
+      await api.delete(`/api/relationships/${id}`);
 
       setSuccessMessage("Relationship deleted successfully!");
 
       await fetchRelationships();
+
+      /*
+       * If the deleted relationship was the one currently
+       * shown in the suggestion, close the suggestion.
+       */
+      if (
+        relationshipSuggestion &&
+        relationshipSuggestion.relationshipId === id
+      ) {
+        setRelationshipSuggestion(null);
+      }
     } catch (error) {
-      console.log("Delete relationship error:", error);
+      console.error("Delete relationship error:", error);
+
+      if (error.response?.status === 403) {
+        setErrorMessage(
+          "You do not have permission to manage family relationships.",
+        );
+
+        await fetchFamilySettings();
+
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.message || "Failed to delete relationship.",
       );
+    } finally {
+      setSaving(false);
     }
   };
 
-  /*
-   * ============================================================
-   * GET MEMBER NAME
-   * ============================================================
-   */
+  // ============================================================
+  // LOADING
+  // ============================================================
 
-  const getMemberName = (id) => {
-    const member = members.find((member) => member.id === Number(id));
-
-    return member ? member.fullName : "Unknown Member";
-  };
-
-  /*
-   * ============================================================
-   * FORM VALID STATE
-   * ============================================================
-   */
-
-  const isFormReady =
-    formData.memberOneId &&
-    formData.relationshipType &&
-    formData.memberTwoId &&
-    formData.memberOneId !== formData.memberTwoId &&
-    (formData.relationshipType !== "Other" || customRelationship.trim());
-
-  /*
-   * ============================================================
-   * LOADING
-   * ============================================================
-   */
-
-  if (loading) {
+  if (loading || settingsLoading) {
     return (
       <div className="relationships-page">
-        <div className="relationship-loading">
+        <div className="relationships-loading">
           <div className="loading-tree">🌳</div>
 
-          <h2>Loading Family Relationships...</h2>
-
           <div className="loading-spinner"></div>
+
+          <h2>Loading your family connections</h2>
+
+          <p>Preparing your family's relationship map...</p>
         </div>
       </div>
     );
   }
 
-  /*
-   * ============================================================
-   * UI
-   * ============================================================
-   */
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div className="relationships-page">
-      {/* =====================================================
-          HERO
-          ===================================================== */}
+      <main className="relationships-container">
+        {/* ======================================================
+            HERO
+        ====================================================== */}
 
-      <div className="relationships-hero">
-        <div className="hero-tree">🌳</div>
+        <header className="relationships-hero">
+          <button
+            type="button"
+            className="relationship-back-button"
+            onClick={() => navigate("/dashboard")}
+          >
+            <span>←</span>
+            Back to Dashboard
+          </button>
 
-        <h1>Relationship Management</h1>
+          <div className="relationship-hero-icon">🔗</div>
 
-        <p>
-          Build and manage the connections that make your family tree complete.
-        </p>
-      </div>
+          <span className="relationships-eyebrow">FAMILY CONNECTIONS</span>
 
-      {/* =====================================================
-          CURRENT FAMILY
-          ===================================================== */}
+          <h1>
+            Build your family's
+            <span> story together.</span>
+          </h1>
 
-      {family && (
-        <div className="current-family">
-          <div className="family-icon">🌳</div>
+          <p>
+            Connect the people in your family tree and preserve the
+            relationships that bring your family together across generations.
+          </p>
+        </header>
 
-          <div className="family-info">
-            <strong>{family.name}</strong>
+        {/* ======================================================
+            FAMILY SUMMARY
+        ====================================================== */}
 
-            <p>Manage relationships within your family</p>
-          </div>
+        {family && (
+          <section className="current-family">
+            <div className="current-family-icon">🌳</div>
 
-          <div className="family-member-count">
-            <span>{members.length}</span>
+            <div className="current-family-content">
+              <span>YOUR FAMILY</span>
 
-            <small>Members</small>
-          </div>
-        </div>
-      )}
+              <strong>{family.name}</strong>
 
-      {/* =====================================================
-          SUCCESS MESSAGE
-          ===================================================== */}
-
-      {successMessage && (
-        <div className="relationship-success">
-          <span>✓</span>
-
-          {successMessage}
-        </div>
-      )}
-
-      {/* =====================================================
-          ERROR MESSAGE
-          ===================================================== */}
-
-      {errorMessage && (
-        <div className="relationship-error">
-          <span>!</span>
-
-          {errorMessage}
-        </div>
-      )}
-
-      {/* =====================================================
-          RECIPROCAL SUGGESTION
-          ===================================================== */}
-
-      {reciprocalSuggestion && (
-        <div className="reciprocal-suggestion">
-          <div className="reciprocal-icon">🔗</div>
-
-          <div className="reciprocal-content">
-            <h3>Add the corresponding relationship?</h3>
-
-            <p>Family relationships usually work in both directions.</p>
-
-            <div className="reciprocal-preview">
-              <span className="reciprocal-person">
-                {reciprocalSuggestion.memberOneName}
-              </span>
-
-              <span className="reciprocal-arrow">→</span>
-
-              <span className="reciprocal-badge">
-                {reciprocalSuggestion.relationshipType}
-              </span>
-
-              <span className="reciprocal-arrow">→</span>
-
-              <span className="reciprocal-person">
-                {reciprocalSuggestion.memberTwoName}
-              </span>
+              <p>Family relationships and connections</p>
             </div>
 
-            <div className="reciprocal-actions">
-              <button
-                className="reciprocal-add-btn"
-                onClick={addReciprocalRelationship}
-                disabled={saving}
-              >
-                {saving ? "Adding..." : "✓ Add Relationship"}
-              </button>
+            <div className="family-member-count">
+              <strong>{members.length}</strong>
 
-              <button
-                className="reciprocal-skip-btn"
-                onClick={skipReciprocalRelationship}
-                disabled={saving}
-              >
-                Skip
-              </button>
+              <span>{members.length === 1 ? "Member" : "Members"}</span>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================
-          FORM
-          ===================================================== */}
-
-      <div
-        className={`relationship-form ${
-          editingRelationship ? "editing-form" : ""
-        }`}
-      >
-        <div className="form-heading">
-          <div className="form-icon">{editingRelationship ? "✏️" : "🔗"}</div>
-
-          <div>
-            <h2>
-              {editingRelationship ? "Edit Relationship" : "Add Relationship"}
-            </h2>
-
-            <p>
-              {editingRelationship
-                ? "Update this family connection"
-                : "Connect two members of your family"}
-            </p>
-          </div>
-        </div>
-
-        <div className="relationship-form-grid">
-          {/* MEMBER ONE */}
-
-          <div className="relationship-field">
-            <label>First Family Member</label>
-
-            <select
-              name="memberOneId"
-              value={formData.memberOneId}
-              onChange={handleChange}
-            >
-              <option value="">Select Member</option>
-
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.fullName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* RELATIONSHIP */}
-
-          <div className="relationship-field">
-            <label>Relationship</label>
-
-            <select
-              name="relationshipType"
-              value={formData.relationshipType}
-              onChange={handleChange}
-            >
-              <option value="">Select Relationship</option>
-
-              {relationshipTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* MEMBER TWO */}
-
-          <div className="relationship-field">
-            <label>Related Family Member</label>
-
-            <select
-              name="memberTwoId"
-              value={formData.memberTwoId}
-              onChange={handleChange}
-            >
-              <option value="">Select Member</option>
-
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.fullName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* CUSTOM RELATIONSHIP */}
-
-        {formData.relationshipType === "Other" && (
-          <div className="custom-relationship-wrapper">
-            <label>Custom Relationship</label>
-
-            <input
-              type="text"
-              placeholder="Example: Family Friend"
-              value={customRelationship}
-              onChange={(e) => setCustomRelationship(e.target.value)}
-            />
-          </div>
+          </section>
         )}
 
-        {/* PREVIEW */}
+        {/* ======================================================
+            MESSAGES
+        ====================================================== */}
 
-        {isFormReady && (
-          <div className="relationship-preview">
-            <span className="preview-member">
-              {getMemberName(formData.memberOneId)}
-            </span>
+        {successMessage && (
+          <div className="relationship-message success" role="status">
+            <span className="message-icon">✓</span>
 
-            <span className="preview-line">→</span>
+            <div>
+              <strong>Success</strong>
+              <p>{successMessage}</p>
+            </div>
 
-            <span className="preview-type">{getRelationshipType()}</span>
-
-            <span className="preview-line">→</span>
-
-            <span className="preview-member">
-              {getMemberName(formData.memberTwoId)}
-            </span>
-          </div>
-        )}
-
-        {/* BUTTONS */}
-
-        <div className="relationship-form-buttons">
-          {editingRelationship ? (
-            <>
-              <button
-                className="primary-action"
-                onClick={updateRelationship}
-                disabled={!isFormReady || saving}
-              >
-                {saving ? "Updating..." : "✓ Update Relationship"}
-              </button>
-
-              <button
-                className="secondary-action"
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
             <button
-              className="primary-action"
-              onClick={createRelationship}
-              disabled={!isFormReady || saving}
+              type="button"
+              onClick={() => setSuccessMessage("")}
+              aria-label="Dismiss success message"
             >
-              {saving ? "Creating..." : "＋ Create Relationship"}
+              ×
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* =====================================================
-          EXISTING RELATIONSHIPS
-          ===================================================== */}
-
-      <div className="relationship-list">
-        <div className="relationship-list-heading">
-          <div>
-            <h2>Family Connections</h2>
-
-            <p>
-              {relationships.length} relationship
-              {relationships.length !== 1 ? "s" : ""} in your family tree
-            </p>
-          </div>
-
-          <div className="connection-count">🔗 {relationships.length}</div>
-        </div>
-
-        {relationships.length === 0 ? (
-          <div className="empty-relationships">
-            <div>🌱</div>
-
-            <h3>No relationships yet</h3>
-
-            <p>Start connecting your family members above.</p>
-          </div>
-        ) : (
-          <div className="relationship-cards">
-            {relationships.map((relationship, index) => (
-              <div
-                key={relationship.id}
-                className="relationship-card"
-                style={{
-                  animationDelay: `${index * 0.08}s`,
-                }}
-              >
-                <div className="relationship-person">
-                  <div className="person-avatar">
-                    {relationship.memberOne?.fullName?.charAt(0)?.toUpperCase()}
-                  </div>
-
-                  <strong>{relationship.memberOne?.fullName}</strong>
-                </div>
-
-                <div className="relationship-connection">
-                  <span className="connection-line">→</span>
-
-                  <span className="relationship-badge">
-                    {relationship.relationshipType}
-                  </span>
-
-                  <span className="connection-line">→</span>
-                </div>
-
-                <div className="relationship-person">
-                  <div className="person-avatar">
-                    {relationship.memberTwo?.fullName?.charAt(0)?.toUpperCase()}
-                  </div>
-
-                  <strong>{relationship.memberTwo?.fullName}</strong>
-                </div>
-
-                <div className="relationship-actions">
-                  <button
-                    className="edit-btn"
-                    onClick={() => startEdit(relationship)}
-                  >
-                    ✏️ Edit
-                  </button>
-
-                  <button
-                    className="delete-btn"
-                    onClick={() => deleteRelationship(relationship.id)}
-                  >
-                    🗑 Delete
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         )}
-      </div>
+
+        {errorMessage && (
+          <div className="relationship-message error" role="alert">
+            <span className="message-icon">!</span>
+
+            <div>
+              <strong>Something needs your attention</strong>
+
+              <p>{errorMessage}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setErrorMessage("")}
+              aria-label="Dismiss error message"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* ======================================================
+            PERMISSION
+        ====================================================== */}
+
+        {isFamilyOwner && (
+          <div className="relationship-permission-notice owner">
+            <div className="permission-icon">👑</div>
+
+            <div>
+              <strong>Family Owner</strong>
+
+              <p>
+                You can create, edit and delete relationships in your family
+                tree.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!canManageRelationships && (
+          <div className="relationship-permission-notice">
+            <div className="permission-icon">🔒</div>
+
+            <div>
+              <strong>Relationship management is restricted</strong>
+
+              <p>
+                You can view existing relationships, but you cannot create, edit
+                or delete them. A family owner can enable
+                <strong>{" Members Can Manage Members "}</strong>
+                from Family Settings.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================
+            RECIPROCAL SUGGESTION
+        ====================================================== */}
+
+        {relationshipSuggestion && canManageRelationships && (
+          <section className="relationship-suggestion">
+            <div className="suggestion-top">
+              <div className="suggestion-icon">💡</div>
+
+              <div>
+                <span className="suggestion-label">SMART SUGGESTION</span>
+
+                <h2>Complete the reverse connection</h2>
+              </div>
+
+              <button
+                type="button"
+                className="suggestion-close"
+                onClick={() => setRelationshipSuggestion(null)}
+                aria-label="Dismiss suggestion"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="suggestion-flow">
+              <div className="suggestion-person">
+                <div className="suggestion-avatar">
+                  {getMemberName(relationshipSuggestion.memberOneId)
+                    ?.charAt(0)
+                    ?.toUpperCase() || "?"}
+                </div>
+
+                <strong>
+                  {getMemberName(relationshipSuggestion.memberOneId)}
+                </strong>
+              </div>
+
+              <div className="suggestion-relationship">
+                <span>{relationshipSuggestion.relationshipType}</span>
+
+                <div>→</div>
+              </div>
+
+              <div className="suggestion-person">
+                <div className="suggestion-avatar">
+                  {getMemberName(relationshipSuggestion.memberTwoId)
+                    ?.charAt(0)
+                    ?.toUpperCase() || "?"}
+                </div>
+
+                <strong>
+                  {getMemberName(relationshipSuggestion.memberTwoId)}
+                </strong>
+              </div>
+            </div>
+
+            <p className="suggestion-description">
+              We found the natural reverse relationship for the connection you
+              just created. Would you like to add it to your family tree?
+            </p>
+
+            <div className="suggestion-actions">
+              <button
+                type="button"
+                className="suggestion-primary"
+                onClick={createSuggestedRelationship}
+                disabled={saving}
+              >
+                {saving ? "Creating..." : "✓ Add Reverse Relationship"}
+              </button>
+
+              <button
+                type="button"
+                className="suggestion-secondary"
+                onClick={() => setRelationshipSuggestion(null)}
+                disabled={saving}
+              >
+                Not Now
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ======================================================
+            CREATE / EDIT FORM
+        ====================================================== */}
+
+        {canManageRelationships && (
+          <section className="relationship-form">
+            <div className="relationship-form-header">
+              <div className="relationship-form-icon">
+                {editingRelationship ? "✏️" : "🔗"}
+              </div>
+
+              <div>
+                <span>
+                  {editingRelationship
+                    ? "UPDATE CONNECTION"
+                    : "CREATE CONNECTION"}
+                </span>
+
+                <h2>
+                  {editingRelationship
+                    ? "Edit Relationship"
+                    : "Add a Relationship"}
+                </h2>
+
+                <p>Connect two members of your family tree.</p>
+              </div>
+            </div>
+
+            <div className="relationship-form-grid">
+              {/* MEMBER ONE */}
+
+              <div className="relationship-field">
+                <label htmlFor="memberOneId">
+                  <span className="field-number">01</span>
+                  Member 1
+                </label>
+
+                <select
+                  id="memberOneId"
+                  name="memberOneId"
+                  value={formData.memberOneId}
+                  onChange={handleChange}
+                  disabled={saving}
+                >
+                  <option value="">Select first family member</option>
+
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* RELATIONSHIP */}
+
+              <div className="relationship-field">
+                <label htmlFor="relationshipType">
+                  <span className="field-number">02</span>
+                  Relationship
+                </label>
+
+                <select
+                  id="relationshipType"
+                  name="relationshipType"
+                  value={formData.relationshipType}
+                  onChange={handleChange}
+                  disabled={saving}
+                >
+                  <option value="">Select relationship</option>
+
+                  {relationshipTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* MEMBER TWO */}
+
+              <div className="relationship-field">
+                <label htmlFor="memberTwoId">
+                  <span className="field-number">03</span>
+                  Member 2
+                </label>
+
+                <select
+                  id="memberTwoId"
+                  name="memberTwoId"
+                  value={formData.memberTwoId}
+                  onChange={handleChange}
+                  disabled={saving}
+                >
+                  <option value="">Select second family member</option>
+
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* CUSTOM RELATIONSHIP */}
+
+            {formData.relationshipType === "Other" && (
+              <div className="relationship-field custom-field">
+                <label htmlFor="customRelationship">Custom Relationship</label>
+
+                <input
+                  id="customRelationship"
+                  type="text"
+                  placeholder="Example: Step Father"
+                  value={customRelationship}
+                  onChange={(event) =>
+                    setCustomRelationship(event.target.value)
+                  }
+                  disabled={saving}
+                />
+              </div>
+            )}
+
+            {/* FORM FOOTER */}
+
+            <div className="relationship-form-footer">
+              <div className="relationship-form-tip">
+                <span>💡</span>
+
+                <p>
+                  <strong>Smart suggestion:</strong> after you create a
+                  relationship, Family Tree Link will suggest the corresponding
+                  reverse relationship automatically.
+                </p>
+              </div>
+
+              <div className="relationship-form-buttons">
+                {editingRelationship ? (
+                  <>
+                    <button
+                      type="button"
+                      className="button-primary"
+                      onClick={updateRelationship}
+                      disabled={saving}
+                    >
+                      {saving ? "Updating..." : "Save Changes"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={resetForm}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="button-primary"
+                    onClick={createRelationship}
+                    disabled={saving}
+                  >
+                    {saving ? "Creating..." : "＋ Create Relationship"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ======================================================
+            EXISTING RELATIONSHIPS
+        ====================================================== */}
+
+        <section className="relationship-list">
+          <div className="relationship-list-header">
+            <div>
+              <span>YOUR FAMILY</span>
+
+              <h2>Existing Relationships</h2>
+
+              <p>Connections currently recorded in your family tree.</p>
+            </div>
+
+            <div className="relationship-count">
+              <strong>{relationships.length}</strong>
+
+              <span>
+                {relationships.length === 1 ? "connection" : "connections"}
+              </span>
+            </div>
+          </div>
+
+          {relationships.length === 0 ? (
+            <div className="empty-relationships">
+              <div className="empty-icon">🔗</div>
+
+              <h3>No relationships yet</h3>
+
+              <p>Start by connecting two members of your family tree.</p>
+            </div>
+          ) : (
+            <div className="relationship-cards">
+              {relationships.map((relationship) => {
+                const memberOneName =
+                  relationship.memberOne?.fullName ||
+                  getMemberName(relationship.memberOne?.id);
+
+                const memberTwoName =
+                  relationship.memberTwo?.fullName ||
+                  getMemberName(relationship.memberTwo?.id);
+
+                return (
+                  <article key={relationship.id} className="relationship-card">
+                    <div className="relationship-member">
+                      <div className="relationship-avatar">
+                        {memberOneName?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+
+                      <div className="relationship-member-info">
+                        <span>MEMBER 1</span>
+
+                        <strong>{memberOneName}</strong>
+                      </div>
+                    </div>
+
+                    <div className="relationship-middle">
+                      <span>{relationship.relationshipType}</span>
+
+                      <div>→</div>
+                    </div>
+
+                    <div className="relationship-member">
+                      <div className="relationship-avatar">
+                        {memberTwoName?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+
+                      <div className="relationship-member-info">
+                        <span>MEMBER 2</span>
+
+                        <strong>{memberTwoName}</strong>
+                      </div>
+                    </div>
+
+                    {canManageRelationships && (
+                      <div className="relationship-actions">
+                        <button
+                          type="button"
+                          className="edit-btn"
+                          onClick={() => startEdit(relationship)}
+                          disabled={saving}
+                        >
+                          ✏ Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="delete-btn"
+                          onClick={() => deleteRelationship(relationship.id)}
+                          disabled={saving}
+                        >
+                          🗑 Delete
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

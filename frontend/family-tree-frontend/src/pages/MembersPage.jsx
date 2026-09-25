@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import FamilyMembershipPanel from "./FamilyMembershipPanel";
 import { useNavigate } from "react-router-dom";
 
 import api from "../services/api";
@@ -6,23 +7,81 @@ import api from "../services/api";
 function MembersPage() {
   const navigate = useNavigate();
 
+  /*
+   * ============================================================
+   * MEMBERS
+   * ============================================================
+   */
+
   const [members, setMembers] = useState([]);
+
+  /*
+   * ============================================================
+   * SEARCH + FILTER
+   * ============================================================
+   */
 
   const [searchTerm, setSearchTerm] = useState("");
 
   const [genderFilter, setGenderFilter] = useState("");
 
+  /*
+   * ============================================================
+   * ADD MEMBER
+   * ============================================================
+   */
+
   const [selectedFile, setSelectedFile] = useState(null);
+
+  /*
+   * ============================================================
+   * EDIT MEMBER
+   * ============================================================
+   */
 
   const [editingMember, setEditingMember] = useState(null);
 
   const [editFile, setEditFile] = useState(null);
+
+  /*
+   * ============================================================
+   * LOADING + SAVING
+   * ============================================================
+   */
 
   const [loading, setLoading] = useState(true);
 
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+
+  /*
+   * ============================================================
+   * FAMILY SETTINGS
+   * ============================================================
+   */
+
+  const [membersCanManageMembers, setMembersCanManageMembers] = useState(false);
+
+  /*
+   * IMPORTANT:
+   *
+   * This tells us whether the currently logged-in user
+   * is the owner of the family.
+   */
+
+  const [isFamilyOwner, setIsFamilyOwner] = useState(false);
+
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  const [leavingFamily, setLeavingFamily] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState(null);
+
+  /*
+   * ============================================================
+   * ADD MEMBER FORM
+   * ============================================================
+   */
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -32,6 +91,12 @@ function MembersPage() {
     occupation: "",
     imagePath: "",
   });
+
+  /*
+   * ============================================================
+   * EDIT MEMBER FORM
+   * ============================================================
+   */
 
   const [editData, setEditData] = useState({
     fullName: "",
@@ -43,13 +108,34 @@ function MembersPage() {
 
   /*
    * ============================================================
-   * FETCH MEMBERS
+   * EFFECTIVE PERMISSION
+   * ============================================================
+   *
+   * Owner ALWAYS has permission.
+   *
+   * Normal members only have permission when the family
+   * owner has enabled "Members Can Manage Members".
+   */
+
+  const canManageMembers = isFamilyOwner || membersCanManageMembers;
+
+  /*
+   * ============================================================
+   * INITIAL LOAD
    * ============================================================
    */
 
   useEffect(() => {
     fetchMembers();
+
+    fetchFamilySettings();
   }, []);
+
+  /*
+   * ============================================================
+   * FETCH MEMBERS
+   * ============================================================
+   */
 
   const fetchMembers = async () => {
     try {
@@ -59,13 +145,59 @@ function MembersPage() {
 
       const response = await api.get("/api/members");
 
-      setMembers(response.data);
+      setMembers(response.data || []);
     } catch (error) {
       console.error("Error loading members:", error);
 
-      setError("Unable to load family members.");
+      setError(
+        error.response?.data?.message || "Unable to load family members.",
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  /*
+   * ============================================================
+   * FETCH FAMILY SETTINGS
+   * ============================================================
+   */
+
+  const fetchFamilySettings = async () => {
+    try {
+      setSettingsLoading(true);
+
+      const response = await api.get("/api/families/settings");
+
+      /*
+       * Backend now returns:
+       *
+       * {
+       *   membersCanManageMembers: true/false,
+       *   isFamilyOwner: true/false
+       * }
+       */
+
+      setMembersCanManageMembers(
+        response.data?.membersCanManageMembers === true,
+      );
+
+      setIsFamilyOwner(response.data?.isFamilyOwner === true);
+    } catch (error) {
+      console.error("Error loading family settings:", error);
+
+      /*
+       * SECURITY FIRST:
+       *
+       * If settings cannot be loaded,
+       * do not allow management controls.
+       */
+
+      setMembersCanManageMembers(false);
+
+      setIsFamilyOwner(false);
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
@@ -78,6 +210,7 @@ function MembersPage() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
+
       [e.target.name]: e.target.value,
     });
   };
@@ -91,6 +224,16 @@ function MembersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    /*
+     * Owner OR permission enabled.
+     */
+
+    if (!canManageMembers) {
+      alert("You do not have permission to manage family members.");
+
+      return;
+    }
+
     if (!formData.fullName.trim()) {
       alert("Please enter the member's name.");
 
@@ -103,7 +246,9 @@ function MembersPage() {
       let uploadedImagePath = "";
 
       /*
-       * Upload image first.
+       * ========================================================
+       * UPLOAD IMAGE
+       * ========================================================
        */
 
       if (selectedFile) {
@@ -117,14 +262,9 @@ function MembersPage() {
       }
 
       /*
-       * Create member.
-       *
-       * IMPORTANT:
-       *
-       * We do NOT send family.
-       *
-       * Backend assigns the current
-       * user's family.
+       * ========================================================
+       * CREATE MEMBER
+       * ========================================================
        */
 
       await api.post("/api/members", {
@@ -136,7 +276,9 @@ function MembersPage() {
       alert("Member added successfully.");
 
       /*
-       * Reset form.
+       * ========================================================
+       * RESET FORM
+       * ========================================================
        */
 
       setFormData({
@@ -150,23 +292,23 @@ function MembersPage() {
 
       setSelectedFile(null);
 
-      /*
-       * Reset file input.
-       */
-
       const fileInput = document.getElementById("member-image");
 
       if (fileInput) {
         fileInput.value = "";
       }
 
-      /*
-       * Refresh members.
-       */
-
       await fetchMembers();
     } catch (error) {
       console.error("Error adding member:", error);
+
+      if (error.response?.status === 403) {
+        alert("You do not have permission to manage family members.");
+
+        await fetchFamilySettings();
+
+        return;
+      }
 
       alert(error.response?.data?.message || "Unable to add member.");
     } finally {
@@ -181,6 +323,12 @@ function MembersPage() {
    */
 
   const startEdit = (member) => {
+    if (!canManageMembers) {
+      alert("You do not have permission to manage family members.");
+
+      return;
+    }
+
     setEditingMember(member);
 
     setEditData({
@@ -209,14 +357,23 @@ function MembersPage() {
       return;
     }
 
+    if (!canManageMembers) {
+      alert("You do not have permission to manage family members.");
+
+      setEditingMember(null);
+
+      return;
+    }
+
     try {
       setSaving(true);
 
       let uploadedImagePath = editingMember.imagePath || "";
 
       /*
-       * Upload new image only if
-       * user selected one.
+       * ========================================================
+       * UPLOAD NEW IMAGE
+       * ========================================================
        */
 
       if (editFile) {
@@ -230,11 +387,9 @@ function MembersPage() {
       }
 
       /*
-       * Update member.
-       *
-       * Family is NOT sent.
-       *
-       * Backend protects family ownership.
+       * ========================================================
+       * UPDATE MEMBER
+       * ========================================================
        */
 
       await api.put(`/api/members/${editingMember.id}`, {
@@ -253,6 +408,16 @@ function MembersPage() {
     } catch (error) {
       console.error("Error updating member:", error);
 
+      if (error.response?.status === 403) {
+        alert("You do not have permission to manage family members.");
+
+        await fetchFamilySettings();
+
+        setEditingMember(null);
+
+        return;
+      }
+
       alert(error.response?.data?.message || "Unable to update member.");
     } finally {
       setSaving(false);
@@ -266,6 +431,12 @@ function MembersPage() {
    */
 
   const deleteMember = async (id) => {
+    if (!canManageMembers) {
+      alert("You do not have permission to manage family members.");
+
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this family member?",
     );
@@ -281,7 +452,79 @@ function MembersPage() {
     } catch (error) {
       console.error("Error deleting member:", error);
 
+      if (error.response?.status === 403) {
+        alert("You do not have permission to manage family members.");
+
+        await fetchFamilySettings();
+
+        return;
+      }
+
       alert(error.response?.data?.message || "Unable to delete member.");
+    }
+  };
+
+  /*
+   * ============================================================
+   * LEAVE FAMILY
+   * ============================================================
+   */
+
+  const leaveFamily = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to leave this family?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLeavingFamily(true);
+
+      await api.post("/api/families/leave");
+
+      alert("You have left the family successfully.");
+      navigate("/families");
+    } catch (error) {
+      console.error("Error leaving family:", error);
+      alert(error.response?.data?.message || "Unable to leave the family.");
+    } finally {
+      setLeavingFamily(false);
+    }
+  };
+
+  /*
+   * ============================================================
+   * REMOVE MEMBER FROM FAMILY
+   * ============================================================
+   */
+
+  const removeMemberFromFamily = async (member) => {
+    if (!isFamilyOwner) {
+      alert("Only the family owner can remove members.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remove ${member.fullName} from this family?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setRemovingMemberId(member.id);
+
+      await api.delete(`/api/families/members/${member.id}`);
+
+      alert("Member removed from the family successfully.");
+      await fetchMembers();
+    } catch (error) {
+      console.error("Error removing member:", error);
+      alert(
+        error.response?.data?.message ||
+          "Unable to remove the member from the family.",
+      );
+    } finally {
+      setRemovingMemberId(null);
     }
   };
 
@@ -307,7 +550,7 @@ function MembersPage() {
    * ============================================================
    */
 
-  if (loading) {
+  if (loading || settingsLoading) {
     return (
       <div className="members-page">
         <div className="members-loading">
@@ -349,6 +592,17 @@ function MembersPage() {
         </div>
       </div>
 
+      <div className="family-member-page-actions">
+        <button
+          type="button"
+          className="leave-family-button"
+          onClick={leaveFamily}
+          disabled={leavingFamily}
+        >
+          {leavingFamily ? "Leaving..." : "Leave Family"}
+        </button>
+      </div>
+
       {/* ======================================================
           ERROR
       ======================================================= */}
@@ -359,7 +613,53 @@ function MembersPage() {
 
           <p>{error}</p>
 
-          <button onClick={fetchMembers}>Try Again</button>
+          <button
+            onClick={() => {
+              fetchMembers();
+
+              fetchFamilySettings();
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* ======================================================
+          PERMISSION INFORMATION
+      ======================================================= */}
+
+      {!canManageMembers && (
+        <div className="members-permission-notice">
+          <span>🔒</span>
+
+          <div>
+            <strong>Member management is restricted</strong>
+
+            <p>
+              Your family settings currently do not allow normal family members
+              to add, edit, or delete family members.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================
+          OWNER INFORMATION
+      ======================================================= */}
+
+      {isFamilyOwner && (
+        <div className="members-permission-notice">
+          <span>👑</span>
+
+          <div>
+            <strong>Family Owner</strong>
+
+            <p>
+              As the family owner, you can manage family members regardless of
+              the "Members Can Manage Members" setting.
+            </p>
+          </div>
         </div>
       )}
 
@@ -400,90 +700,116 @@ function MembersPage() {
             ADD MEMBER
         ===================================================== */}
 
-        <div className="member-form">
-          <div className="form-header">
-            <span className="form-icon">👤</span>
+        {canManageMembers ? (
+          <div className="member-form">
+            <div className="form-header">
+              <span className="form-icon">👤</span>
 
-            <div>
-              <h2>Add New Member</h2>
+              <div>
+                <h2>Add New Member</h2>
 
-              <p>Add someone to your family tree.</p>
+                <p>Add someone to your family tree.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <label>Full Name</label>
+
+              <input
+                type="text"
+                name="fullName"
+                placeholder="Enter full name"
+                value={formData.fullName}
+                onChange={handleChange}
+                required
+              />
+
+              <label>Gender</label>
+
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+              >
+                <option value="">Select Gender</option>
+
+                <option value="Male">Male</option>
+
+                <option value="Female">Female</option>
+              </select>
+
+              <label>Date of Birth</label>
+
+              <input
+                type="date"
+                name="dateOfBirth"
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+              />
+
+              <label>Biography</label>
+
+              <textarea
+                name="biography"
+                placeholder="Tell us about this family member..."
+                value={formData.biography}
+                onChange={handleChange}
+                rows="4"
+              />
+
+              <label>Occupation</label>
+
+              <input
+                type="text"
+                name="occupation"
+                placeholder="e.g. Teacher, Engineer"
+                value={formData.occupation}
+                onChange={handleChange}
+              />
+
+              <label>Profile Photo</label>
+
+              <input
+                id="member-image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedFile(e.target.files[0])}
+              />
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="add-member-button"
+              >
+                {saving ? "Adding Member..." : "＋ Add Member"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="member-form member-form-restricted">
+            <div className="form-header">
+              <span className="form-icon">🔒</span>
+
+              <div>
+                <h2>Member Management</h2>
+
+                <p>Adding new family members is currently restricted.</p>
+              </div>
+            </div>
+
+            <div className="restricted-management-content">
+              <div className="restricted-icon">🔐</div>
+
+              <h3>Permission Required</h3>
+
+              <p>
+                A family owner can enable
+                <strong>{" Members Can Manage Members "}</strong>
+                from Family Settings.
+              </p>
             </div>
           </div>
-
-          <form onSubmit={handleSubmit}>
-            <label>Full Name</label>
-
-            <input
-              type="text"
-              name="fullName"
-              placeholder="Enter full name"
-              value={formData.fullName}
-              onChange={handleChange}
-              required
-            />
-
-            <label>Gender</label>
-
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-            >
-              <option value="">Select Gender</option>
-
-              <option value="Male">Male</option>
-
-              <option value="Female">Female</option>
-            </select>
-
-            <label>Date of Birth</label>
-
-            <input
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-            />
-
-            <label>Biography</label>
-
-            <textarea
-              name="biography"
-              placeholder="Tell us about this family member..."
-              value={formData.biography}
-              onChange={handleChange}
-              rows="4"
-            />
-
-            <label>Occupation</label>
-
-            <input
-              type="text"
-              name="occupation"
-              placeholder="e.g. Teacher, Engineer"
-              value={formData.occupation}
-              onChange={handleChange}
-            />
-
-            <label>Profile Photo</label>
-
-            <input
-              id="member-image"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setSelectedFile(e.target.files[0])}
-            />
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="add-member-button"
-            >
-              {saving ? "Adding Member..." : "＋ Add Member"}
-            </button>
-          </form>
-        </div>
+        )}
 
         {/* ====================================================
             MEMBER GRID
@@ -549,19 +875,35 @@ function MembersPage() {
                         View Profile
                       </button>
 
-                      <button
-                        className="edit-button"
-                        onClick={() => startEdit(member)}
-                      >
-                        Edit
-                      </button>
+                      {canManageMembers && (
+                        <>
+                          <button
+                            className="edit-button"
+                            onClick={() => startEdit(member)}
+                          >
+                            Edit
+                          </button>
 
-                      <button
-                        className="delete-button"
-                        onClick={() => deleteMember(member.id)}
-                      >
-                        Delete
-                      </button>
+                          <button
+                            className="delete-button"
+                            onClick={() => deleteMember(member.id)}
+                          >
+                            Delete
+                          </button>
+
+                          {isFamilyOwner && !member.isOwner && (
+                            <button
+                              className="remove-member-button"
+                              onClick={() => removeMemberFromFamily(member)}
+                              disabled={removingMemberId === member.id}
+                            >
+                              {removingMemberId === member.id
+                                ? "Removing..."
+                                : "Remove"}
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -575,7 +917,7 @@ function MembersPage() {
           EDIT MODAL
       ======================================================= */}
 
-      {editingMember && (
+      {editingMember && canManageMembers && (
         <div className="edit-modal">
           <div className="edit-content">
             <div className="edit-header">
@@ -593,7 +935,9 @@ function MembersPage() {
               </button>
             </div>
 
-            {/* PHOTO */}
+            {/* ==================================================
+                  PHOTO
+              ================================================== */}
 
             <div className="edit-photo">
               {editingMember.imagePath ? (

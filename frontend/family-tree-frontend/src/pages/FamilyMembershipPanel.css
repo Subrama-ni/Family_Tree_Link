@@ -1,0 +1,281 @@
+.family-membership-panel {
+  width: 100%;
+  margin-top: 24px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-sizing: border-box;
+}
+
+.membership-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.membership-header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 24px;
+}
+
+.membership-header p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.member-count {
+  padding: 8px 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.membership-setting-card,
+.leave-family-card,
+.membership-info-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+}
+
+.membership-setting-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.leave-family-card {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.membership-info-card {
+  display: block;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.membership-setting-card h3,
+.leave-family-card h3 {
+  margin: 0 0 6px;
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.membership-setting-card p,
+.leave-family-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.switch-container {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch-container input {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: #cbd5e1;
+  border-radius: 30px;
+  transition: 0.25s;
+}
+
+.switch-slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.25s;
+}
+
+.switch-container input:checked + .switch-slider {
+  background: #2563eb;
+}
+
+.switch-container input:checked + .switch-slider::before {
+  transform: translateX(22px);
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.member-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.member-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.member-avatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.member-details h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.member-details p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.owner-badge {
+  padding: 7px 12px;
+  border-radius: 20px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.remove-button,
+.danger-button {
+  border: none;
+  border-radius: 7px;
+  padding: 9px 14px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remove-button {
+  background: #dc2626;
+}
+
+.remove-button:hover {
+  background: #b91c1c;
+}
+
+.danger-button {
+  background: #ea580c;
+  white-space: nowrap;
+}
+
+.danger-button:hover {
+  background: #c2410c;
+}
+
+.remove-button:disabled,
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.membership-message {
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.success-message {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.membership-loading,
+.empty-members {
+  margin: 0;
+  color: #64748b;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .family-membership-panel {
+    padding: 16px;
+  }
+
+  .membership-header,
+  .membership-setting-card,
+  .leave-family-card,
+  .member-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .member-count {
+    align-self: flex-start;
+  }
+
+  .member-actions {
+    width: 100%;
+  }
+
+  .remove-button,
+  .danger-button {
+    width: 100%;
+  }
+}

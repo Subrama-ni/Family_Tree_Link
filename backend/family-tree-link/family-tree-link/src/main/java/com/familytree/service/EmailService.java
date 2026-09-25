@@ -20,6 +20,12 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    /*
+     * ============================================================
+     * PASSWORD RESET EMAIL
+     * ============================================================
+     */
+
     public void sendPasswordResetEmail(
             String recipientEmail,
             String token) {
@@ -50,6 +56,62 @@ public class EmailService {
                 + "This link will expire in 15 minutes.\n\n"
                 + "If you did not request a password reset, "
                 + "you can safely ignore this email.\n\n"
+                + "Regards,\n"
+                + "Family Tree Link"
+        );
+
+        mailSender.send(message);
+    }
+
+    /*
+     * ============================================================
+     * FAMILY INVITATION EMAIL
+     * ============================================================
+     */
+
+    public void sendFamilyInvitationEmail(
+            String recipientEmail,
+            String familyName,
+            String inviterName,
+            String token) {
+
+        String invitationLink =
+                frontendUrl
+                        + "/family-invitation?token="
+                        + token;
+
+        SimpleMailMessage message =
+                new SimpleMailMessage();
+
+        message.setFrom(senderEmail);
+
+        message.setTo(recipientEmail);
+
+        message.setSubject(
+                "Family Tree Link - You Have Been Invited!"
+        );
+
+        message.setText(
+                "Hello,\n\n"
+
+                + inviterName
+                + " has invited you to join the family:\n\n"
+
+                + familyName
+                + "\n\n"
+
+                + "You can join the family and become "
+                + "part of their family tree using the "
+                + "link below:\n\n"
+
+                + invitationLink
+                + "\n\n"
+
+                + "This invitation will expire in 7 days.\n\n"
+
+                + "If you were not expecting this invitation, "
+                + "you can safely ignore this email.\n\n"
+
                 + "Regards,\n"
                 + "Family Tree Link"
         );

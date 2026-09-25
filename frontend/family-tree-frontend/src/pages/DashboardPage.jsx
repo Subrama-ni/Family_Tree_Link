@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   Chart as ChartJS,
@@ -27,11 +27,31 @@ ChartJS.register(
 );
 
 function DashboardPage() {
+  const navigate = useNavigate();
+
   const [members, setMembers] = useState([]);
   const [relationships, setRelationships] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  /*
+   * ============================================================
+   * FAMILY STATE
+   * ============================================================
+   *
+   * null  = still checking whether the user has a family
+   * true  = user belongs to a family
+   * false = user does not belong to a family
+   *
+   * IMPORTANT:
+   * Do NOT initialize this to true.
+   * Initializing it to true causes the normal dashboard
+   * to appear before the family check is completed.
+   * ============================================================
+   */
+
+  const [hasFamily, setHasFamily] = useState(null);
 
   /*
    * ============================================================
@@ -48,13 +68,64 @@ function DashboardPage() {
       setLoading(true);
       setError("");
 
+      /*
+       * ========================================================
+       * STEP 1
+       * CHECK WHETHER USER BELONGS TO A FAMILY
+       * ========================================================
+       */
+
+      try {
+        await api.get("/api/families/current");
+
+        /*
+         * User belongs to a family.
+         */
+        setHasFamily(true);
+      } catch (familyError) {
+        console.error("Family check error:", familyError);
+
+        /*
+         * 403 means:
+         *
+         * User is authenticated,
+         * but does not belong to a family yet.
+         *
+         * This is NOT a login failure.
+         */
+
+        if (familyError.response?.status === 403) {
+          setHasFamily(false);
+
+          setMembers([]);
+          setRelationships([]);
+
+          return;
+        }
+
+        /*
+         * Any other error is a genuine problem.
+         */
+        throw familyError;
+      }
+
+      /*
+       * ========================================================
+       * STEP 2
+       * LOAD FAMILY DATA
+       * ========================================================
+       */
+
       const membersResponse = await api.get("/api/members");
+
       const relationshipsResponse = await api.get("/api/relationships");
 
-      setMembers(membersResponse.data);
-      setRelationships(relationshipsResponse.data);
+      setMembers(membersResponse.data || []);
+
+      setRelationships(relationshipsResponse.data || []);
     } catch (error) {
       console.error("Dashboard data error:", error);
+
       setError("Unable to load dashboard data.");
     } finally {
       setLoading(false);
@@ -109,7 +180,7 @@ function DashboardPage() {
 
   /*
    * ============================================================
-   * OLDEST / YOUNGEST
+   * OLDEST / YOUNGEST MEMBER
    * ============================================================
    */
 
@@ -145,19 +216,198 @@ function DashboardPage() {
    * GENERATIONS
    * ============================================================
    *
-   * Preserving your existing logic:
-   * Father/Mother relationships are used to estimate generations.
+   * A generation is determined by the deepest
+   * parent → child chain in the family.
+   *
+   * Example:
+   *
+   * Grandfather ─ Grandmother   → Generation 1
+   *              │
+   *        Father ─ Mother       → Generation 2
+   *              │
+   *             Son             → Generation 3
+   *              │
+   *          Grandson            → Generation 4
+   *
+   * Spouses do NOT create another generation.
+   *
+   * We support both directions used by the application:
+   *
+   * Father / Mother / Parent
+   *
+   * and
+   *
+   * Son / Daughter
+   * ============================================================
    */
 
-  const generationCount = new Set(
-    relationships
-      .filter(
-        (relationship) =>
-          relationship.relationshipType === "Father" ||
-          relationship.relationshipType === "Mother",
-      )
-      .map((relationship) => relationship.memberTwo?.id),
-  ).size;
+  /*
+   * ------------------------------------------------------------
+   * BUILD PARENT MAP
+   * ------------------------------------------------------------
+   *
+   * childId → [parentId, parentId]
+   */
+
+  const parentsByChild = {};
+
+  relationships.forEach((relationship) => {
+    if (!relationship.memberOne || !relationship.memberTwo) {
+      return;
+    }
+
+    const memberOneId = Number(relationship.memberOne.id);
+
+    const memberTwoId = Number(relationship.memberTwo.id);
+
+    const type = String(relationship.relationshipType || "").trim();
+
+    /*
+     * Parent → Child
+     */
+
+    if (type === "Father" || type === "Mother" || type === "Parent") {
+      if (!parentsByChild[memberTwoId]) {
+        parentsByChild[memberTwoId] = [];
+      }
+
+      if (!parentsByChild[memberTwoId].includes(memberOneId)) {
+        parentsByChild[memberTwoId].push(memberOneId);
+      }
+
+      return;
+    }
+
+    /*
+     * Child → Parent
+     *
+     * Example:
+     *
+     * Subramani → Son → Muniyappa
+     *
+     * means:
+     *
+     * Muniyappa → Subramani
+     */
+
+    if (type === "Son" || type === "Daughter") {
+      if (!parentsByChild[memberOneId]) {
+        parentsByChild[memberOneId] = [];
+      }
+
+      if (!parentsByChild[memberOneId].includes(memberTwoId)) {
+        parentsByChild[memberOneId].push(memberTwoId);
+      }
+    }
+  });
+
+  /*
+   * ------------------------------------------------------------
+   * CALCULATE GENERATION FOR EACH MEMBER
+   * ------------------------------------------------------------
+   *
+   * Members without parents are generation 1.
+   *
+   * Their children are generation 2.
+   *
+   * Their grandchildren are generation 3.
+   *
+   * And so on.
+   */
+
+  const generationMap = {};
+
+  /*
+   * Prevent circular relationship data from
+   * causing infinite recursion.
+   */
+
+  const calculateGeneration = (memberId, visiting = new Set()) => {
+    const id = Number(memberId);
+
+    /*
+     * Already calculated.
+     */
+
+    if (generationMap[id] !== undefined) {
+      return generationMap[id];
+    }
+
+    /*
+     * Protect against accidental circular
+     * relationships.
+     */
+
+    if (visiting.has(id)) {
+      return 1;
+    }
+
+    visiting.add(id);
+
+    const parents = parentsByChild[id] || [];
+
+    /*
+     * No parents means this is the
+     * oldest generation we know about.
+     */
+
+    if (parents.length === 0) {
+      generationMap[id] = 1;
+
+      return 1;
+    }
+
+    /*
+     * A member belongs to the generation
+     * immediately after their oldest parent.
+     */
+
+    let highestParentGeneration = 1;
+
+    parents.forEach((parentId) => {
+      const parentGeneration = calculateGeneration(parentId, new Set(visiting));
+
+      highestParentGeneration = Math.max(
+        highestParentGeneration,
+        parentGeneration,
+      );
+    });
+
+    const generation = highestParentGeneration + 1;
+
+    generationMap[id] = generation;
+
+    return generation;
+  };
+
+  /*
+   * ------------------------------------------------------------
+   * CALCULATE ALL MEMBER GENERATIONS
+   * ------------------------------------------------------------
+   */
+
+  members.forEach((member) => {
+    calculateGeneration(member.id);
+  });
+
+  /*
+   * ------------------------------------------------------------
+   * FIND DEEPEST GENERATION
+   * ------------------------------------------------------------
+   */
+
+  const generationValues = Object.values(generationMap);
+
+  const generationCount =
+    members.length === 0
+      ? 0
+      : generationValues.length > 0
+        ? Math.max(...generationValues)
+        : 1;
+
+  console.log("Family Generation Map:", generationMap);
+
+  console.log("Actual Generation Count:", generationCount);
 
   /*
    * ============================================================
@@ -221,13 +471,56 @@ function DashboardPage() {
     ],
   };
 
+  const handleLeaveFamily = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to leave this family?\n\n" +
+        "Your account will remain active, but you will no longer be a member of this family. " +
+        "The family and its records will not be deleted.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8080/api/families/leave", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to leave family");
+      }
+
+      alert("You have successfully left the family.");
+
+      // Change this route to your actual family selection page.
+      window.location.href = "/families";
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   /*
    * ============================================================
-   * LOADING
+   * INITIAL FAMILY CHECK / LOADING
+   * ============================================================
+   *
+   * IMPORTANT:
+   *
+   * hasFamily === null means that we have NOT yet received
+   * the answer from /api/families/current.
+   *
+   * Therefore we must NOT show the normal dashboard yet.
    * ============================================================
    */
 
-  if (loading) {
+  if (loading || hasFamily === null) {
     return (
       <div className="dashboard-page cinematic-dashboard">
         <div className="dashboard-loading cinematic-loading">
@@ -235,10 +528,164 @@ function DashboardPage() {
             <div className="loading-tree">🌳</div>
           </div>
 
-          <h2>Growing your family story...</h2>
+          <h2>Preparing your family workspace...</h2>
 
-          <p>Connecting members, relationships and memories.</p>
+          <p>Checking your family connection.</p>
         </div>
+      </div>
+    );
+  }
+
+  /*
+   * ============================================================
+   * FAMILY SETUP / FAMILY GATEWAY
+   * ============================================================
+   *
+   * This is shown when:
+   *
+   * authenticated = true
+   * family_id = NULL
+   *
+   * The user is NOT logged out.
+   *
+   * They can:
+   *
+   * 1. Join an existing family
+   * 2. Create a new family
+   * ============================================================
+   */
+
+  if (hasFamily === false) {
+    return (
+      <div className="dashboard-page family-gateway-page">
+        {/* ==================================================
+            AMBIENT BACKGROUND
+        ================================================== */}
+
+        <div className="dashboard-ambient">
+          <span className="ambient-orb orb-one"></span>
+
+          <span className="ambient-orb orb-two"></span>
+
+          <span className="ambient-orb orb-three"></span>
+
+          <span className="floating-leaf leaf-one">🍃</span>
+
+          <span className="floating-leaf leaf-two">🍃</span>
+
+          <span className="floating-leaf leaf-three">🍂</span>
+
+          <span className="floating-leaf leaf-four">🍃</span>
+        </div>
+
+        {/* ==================================================
+            FAMILY GATEWAY
+        ================================================== */}
+
+        <section className="family-gateway">
+          {/* ==================================================
+              ANIMATED TREE
+          ================================================== */}
+
+          <div className="gateway-tree-wrapper">
+            <div className="gateway-glow"></div>
+
+            <div className="gateway-tree">🌳</div>
+
+            <span className="gateway-leaf leaf-a">🍃</span>
+
+            <span className="gateway-leaf leaf-b">🍃</span>
+
+            <span className="gateway-leaf leaf-c">🍂</span>
+          </div>
+
+          {/* ==================================================
+              HEADING
+          ================================================== */}
+
+          <span className="section-kicker">YOUR FAMILY STORY</span>
+
+          <h1>
+            Your story is
+            <span> waiting to begin.</span>
+          </h1>
+
+          <p className="gateway-description">
+            Your Family Tree Link account is ready.
+            <br />
+            You haven't joined a family yet, but your place in the story is
+            waiting for you.
+          </p>
+
+          {/* ==================================================
+              FAMILY JOURNEY
+          ================================================== */}
+
+          <div className="family-journey-preview">
+            <div className="gateway-step active">
+              <div className="gateway-step-icon">👤</div>
+
+              <span>Account Created</span>
+            </div>
+
+            <div className="gateway-path"></div>
+
+            <div className="gateway-step">
+              <div className="gateway-step-icon">🌳</div>
+
+              <span>Join a Family</span>
+            </div>
+
+            <div className="gateway-path"></div>
+
+            <div className="gateway-step">
+              <div className="gateway-step-icon">❤️</div>
+
+              <span>Begin Your Story</span>
+            </div>
+          </div>
+
+          {/* ==================================================
+              ACTIONS
+          ================================================== */}
+
+          <div className="gateway-actions">
+            <button
+              className="gateway-primary-button"
+              onClick={() => navigate("/family-invitations")}
+            >
+              <span className="gateway-button-icon">💌</span>
+
+              <span>Join a Family</span>
+
+              <span className="gateway-arrow">→</span>
+            </button>
+
+            <button
+              className="gateway-secondary-button"
+              onClick={() => navigate("/create-family")}
+            >
+              <span className="gateway-button-icon">🌱</span>
+
+              <span>Create a New Family</span>
+
+              <span className="gateway-arrow">→</span>
+            </button>
+          </div>
+
+          {/* ==================================================
+              INVITATION NOTE
+          ================================================== */}
+
+          <div className="gateway-note">
+            <span>💡</span>
+
+            <p>
+              If a family member has invited you, use your invitation to join
+              their family tree.
+            </p>
+          </div>
+        </section>
       </div>
     );
   }
@@ -267,7 +714,7 @@ function DashboardPage() {
 
   /*
    * ============================================================
-   * DASHBOARD
+   * NORMAL FAMILY DASHBOARD
    * ============================================================
    */
 
@@ -279,12 +726,17 @@ function DashboardPage() {
 
       <div className="dashboard-ambient">
         <span className="ambient-orb orb-one"></span>
+
         <span className="ambient-orb orb-two"></span>
+
         <span className="ambient-orb orb-three"></span>
 
         <span className="floating-leaf leaf-one">🍃</span>
+
         <span className="floating-leaf leaf-two">🍃</span>
+
         <span className="floating-leaf leaf-three">🍂</span>
+
         <span className="floating-leaf leaf-four">🍃</span>
       </div>
 
@@ -315,6 +767,7 @@ function DashboardPage() {
           <div className="hero-stats">
             <div className="hero-stat">
               <strong>{totalMembers}</strong>
+
               <span>Members</span>
             </div>
 
@@ -322,6 +775,7 @@ function DashboardPage() {
 
             <div className="hero-stat">
               <strong>{generationCount || 0}</strong>
+
               <span>Generations</span>
             </div>
 
@@ -329,14 +783,15 @@ function DashboardPage() {
 
             <div className="hero-stat">
               <strong>{relationships.length}</strong>
+
               <span>Connections</span>
             </div>
           </div>
 
           <div className="hero-actions">
-            <Link to="/tree" className="hero-primary-button">
-              <span>Explore Family Tree</span>
-              <span className="button-arrow">→</span>
+            <Link to="/tree" className="explore-family-tree-button">
+              Explore Family Tree
+              <span className="arrow">→</span>
             </Link>
 
             <Link to="/members" className="hero-secondary-button">
@@ -345,18 +800,22 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* ======================================================
+        {/* ==================================================
             FAMILY CONSTELLATION
-        ======================================================= */}
+        ================================================== */}
 
         <div className="family-visual">
           <div className="constellation-glow"></div>
 
           <div className="constellation">
             <div className="constellation-line line-one"></div>
+
             <div className="constellation-line line-two"></div>
+
             <div className="constellation-line line-three"></div>
+
             <div className="constellation-line line-four"></div>
+
             <div className="constellation-line line-five"></div>
 
             <div className="constellation-person person-one">
@@ -688,6 +1147,10 @@ function DashboardPage() {
         </div>
 
         <div className="charts-grid cinematic-charts">
+          {/* ==================================================
+              GENDER
+          ================================================== */}
+
           <div className="chart-card cinematic-chart-card">
             <div className="chart-card-heading">
               <div>
@@ -704,6 +1167,7 @@ function DashboardPage() {
                 data={genderChartData}
                 options={{
                   responsive: true,
+
                   maintainAspectRatio: false,
 
                   plugins: {
@@ -715,6 +1179,10 @@ function DashboardPage() {
               />
             </div>
           </div>
+
+          {/* ==================================================
+              OCCUPATION
+          ================================================== */}
 
           <div className="chart-card cinematic-chart-card">
             <div className="chart-card-heading">
@@ -732,6 +1200,7 @@ function DashboardPage() {
                 data={occupationChartData}
                 options={{
                   responsive: true,
+
                   maintainAspectRatio: false,
 
                   plugins: {
@@ -750,6 +1219,10 @@ function DashboardPage() {
             </div>
           </div>
 
+          {/* ==================================================
+              RELATIONSHIPS
+          ================================================== */}
+
           <div className="chart-card cinematic-chart-card">
             <div className="chart-card-heading">
               <div>
@@ -766,6 +1239,7 @@ function DashboardPage() {
                 data={relationshipChartData}
                 options={{
                   responsive: true,
+
                   maintainAspectRatio: false,
 
                   plugins: {
@@ -818,6 +1292,22 @@ function DashboardPage() {
           </Link>
         </div>
       </section>
+
+      <button
+        type="button"
+        onClick={handleLeaveFamily}
+        style={{
+          backgroundColor: "#dc2626",
+          color: "#ffffff",
+          border: "none",
+          padding: "10px 18px",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "600",
+        }}
+      >
+        Leave Family
+      </button>
     </div>
   );
 }

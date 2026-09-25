@@ -3,6 +3,7 @@ package com.familytree.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.dto.AuthResponse;
 import com.dto.LoginRequest;
 import com.dto.RegisterRequest;
 import com.familytree.service.AuthService;
@@ -39,10 +40,10 @@ public class AuthController {
     // ============================================================
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(
+    public ResponseEntity<AuthResponse> login(
             @RequestBody LoginRequest request) {
 
-        String result =
+        AuthResponse result =
                 authService.login(request);
 
         return ResponseEntity.ok(result);
@@ -80,7 +81,7 @@ public class AuthController {
     }
 
     // ============================================================
-    // REQUEST DTOs
+    // FORGOT PASSWORD REQUEST DTO
     // ============================================================
 
     public static class ForgotPasswordRequest {
@@ -95,6 +96,10 @@ public class AuthController {
             this.email = email;
         }
     }
+
+    // ============================================================
+    // RESET PASSWORD REQUEST DTO
+    // ============================================================
 
     public static class ResetPasswordRequest {
 
