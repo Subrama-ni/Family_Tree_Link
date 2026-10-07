@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.familytree.entity.User;
@@ -16,16 +17,21 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    private static final String SECRET_KEY =
-            "FamilyTreeLinkSuperSecretKeyForJWTAuthentication2026";
+    private final String secretKey;
 
     private static final long EXPIRATION_TIME =
             1000L * 60 * 60 * 24; // 24 hours
 
+    public JwtService(
+            @Value("${JWT_SECRET}") String secretKey) {
+
+        this.secretKey = secretKey;
+    }
+
     private Key getSigningKey() {
 
         return Keys.hmacShaKeyFor(
-                SECRET_KEY.getBytes(
+                secretKey.getBytes(
                         StandardCharsets.UTF_8
                 )
         );
@@ -33,59 +39,52 @@ public class JwtService {
 
     public String generateToken(User user) {
 
-    Date now = new Date();
+        Date now = new Date();
 
-    Date expiration =
-            new Date(
-                    now.getTime()
-                            + EXPIRATION_TIME
+        Date expiration =
+                new Date(
+                        now.getTime()
+                                + EXPIRATION_TIME
+                );
+
+        var builder =
+                Jwts.builder()
+
+                        .setSubject(
+                                user.getEmail()
+                        )
+
+                        .claim(
+                                "userId",
+                                user.getId()
+                        )
+
+                        .claim(
+                                "fullName",
+                                user.getFullName()
+                        );
+
+        if (user.getFamily() != null) {
+
+            builder.claim(
+                    "familyId",
+                    user.getFamily().getId()
             );
+        }
 
-    var builder =
-            Jwts.builder()
+        return builder
 
-                    .setSubject(
-                            user.getEmail()
-                    )
+                .setIssuedAt(now)
 
-                    .claim(
-                            "userId",
-                            user.getId()
-                    )
+                .setExpiration(expiration)
 
-                    .claim(
-                            "fullName",
-                            user.getFullName()
-                    );
+                .signWith(
+                        getSigningKey(),
+                        SignatureAlgorithm.HS256
+                )
 
-    /*
-     * A newly registered user may not belong
-     * to a family yet.
-     *
-     * Therefore, only add familyId when
-     * a family actually exists.
-     */
-    if (user.getFamily() != null) {
-
-        builder.claim(
-                "familyId",
-                user.getFamily().getId()
-        );
+                .compact();
     }
-
-    return builder
-
-            .setIssuedAt(now)
-
-            .setExpiration(expiration)
-
-            .signWith(
-                    getSigningKey(),
-                    SignatureAlgorithm.HS256
-            )
-
-            .compact();
-}
 
     public String extractEmail(
             String token) {
@@ -102,27 +101,49 @@ public class JwtService {
         return claims.getSubject();
     }
 
-    public Long extractFamilyId(
-        String token) {
+    public Long extractUserId(
+            String token) {
 
-    Claims claims =
-            Jwts.parser()
-                    .setSigningKey(
-                            getSigningKey()
-                    )
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+        Claims claims =
+                Jwts.parser()
+                        .setSigningKey(
+                                getSigningKey()
+                        )
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
 
-    Object familyId =
-            claims.get("familyId");
+        Object userId =
+                claims.get("userId");
 
-    if (familyId == null) {
-        return null;
+        if (userId == null) {
+            return null;
+        }
+
+        return ((Number) userId).longValue();
     }
 
-    return ((Number) familyId).longValue();
-}
+    public Long extractFamilyId(
+            String token) {
+
+        Claims claims =
+                Jwts.parser()
+                        .setSigningKey(
+                                getSigningKey()
+                        )
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+
+        Object familyId =
+                claims.get("familyId");
+
+        if (familyId == null) {
+            return null;
+        }
+
+        return ((Number) familyId).longValue();
+    }
 
     public boolean isTokenValid(
             String token,
@@ -133,9 +154,59 @@ public class JwtService {
             String email =
                     extractEmail(token);
 
-            return email.equals(
-                    user.getEmail()
-            );
+            if (!email.equals(user.getEmail())) {
+                return false;
+            }
+
+            /*
+             * ==================================================
+             * VERIFY CURRENT FAMILY MEMBERSHIP
+             * ==================================================
+             *
+             * The database is the source of truth.
+             *
+             * This prevents an old JWT from continuing to
+             * access a family after the user has been removed.
+             */
+
+            Long tokenFamilyId =
+                    extractFamilyId(token);
+
+            Long currentFamilyId =
+                    user.getFamily() != null
+                            ? user.getFamily().getId()
+                            : null;
+
+            /*
+             * Token says user belongs to a family,
+             * but database says user has no family.
+             */
+            if (tokenFamilyId != null
+                    && currentFamilyId == null) {
+
+                return false;
+            }
+
+            /*
+             * Token family and current database family
+             * must match.
+             */
+            if (tokenFamilyId != null
+                    && !tokenFamilyId.equals(
+                            currentFamilyId)) {
+
+                return false;
+            }
+
+            /*
+             * Both are null.
+             * User currently has no family.
+             */
+            return tokenFamilyId == null
+                    && currentFamilyId == null
+                    || tokenFamilyId != null
+                    && tokenFamilyId.equals(
+                            currentFamilyId);
 
         } catch (Exception e) {
 
