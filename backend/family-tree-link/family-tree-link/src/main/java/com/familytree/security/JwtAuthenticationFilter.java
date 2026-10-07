@@ -3,22 +3,17 @@ package com.familytree.security;
 import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.security.core.userdetails.UserDetails;
-
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.familytree.entity.User;
 import com.familytree.service.CustomUserDetailsService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -53,13 +48,11 @@ public class JwtAuthenticationFilter
                 request.getHeader("Authorization");
 
         String username = null;
-
         String jwt = null;
-
 
         /*
          * ======================================================
-         * READ AUTHORIZATION HEADER
+         * READ JWT
          * ======================================================
          */
 
@@ -71,8 +64,7 @@ public class JwtAuthenticationFilter
                         0,
                         7)) {
 
-            jwt =
-                    authHeader.substring(7);
+            jwt = authHeader.substring(7);
 
             try {
 
@@ -88,10 +80,9 @@ public class JwtAuthenticationFilter
             }
         }
 
-
         /*
          * ======================================================
-         * AUTHENTICATE USER
+         * AUTHENTICATE
          * ======================================================
          */
 
@@ -103,19 +94,28 @@ public class JwtAuthenticationFilter
 
             try {
 
+                User currentUser =
+                        userDetailsService
+                                .getUserByEmail(
+                                        username
+                                );
+
                 UserDetails userDetails =
                         userDetailsService
                                 .loadUserByUsername(
                                         username
                                 );
 
+                /*
+                 * IMPORTANT:
+                 *
+                 * This checks the JWT against the
+                 * CURRENT database state.
+                 */
                 boolean valid =
                         jwtService.isTokenValid(
                                 jwt,
-                                userDetailsService
-                                        .getUserByEmail(
-                                                username
-                                        )
+                                currentUser
                         );
 
                 if (valid) {
@@ -125,7 +125,8 @@ public class JwtAuthenticationFilter
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
-                                    userDetails.getAuthorities()
+                                    userDetails
+                                            .getAuthorities()
                             );
 
                     authentication.setDetails(
@@ -138,11 +139,6 @@ public class JwtAuthenticationFilter
                             .setAuthentication(
                                     authentication
                             );
-
-                    System.out.println(
-                            "JWT authenticated: "
-                                    + username
-                    );
                 }
 
             } catch (Exception e) {
@@ -153,7 +149,6 @@ public class JwtAuthenticationFilter
                 );
             }
         }
-
 
         /*
          * ======================================================
@@ -166,4 +161,4 @@ public class JwtAuthenticationFilter
                 response
         );
     }
-}
+        }
