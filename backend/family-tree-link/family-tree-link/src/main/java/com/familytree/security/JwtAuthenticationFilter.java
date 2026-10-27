@@ -9,6 +9,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.familytree.entity.User;
 import com.familytree.service.CustomUserDetailsService;
 
 import jakarta.servlet.FilterChain;
@@ -47,12 +48,11 @@ public class JwtAuthenticationFilter
                 request.getHeader("Authorization");
 
         String username = null;
-
         String jwt = null;
 
         /*
          * ======================================================
-         * READ AUTHORIZATION HEADER
+         * READ JWT
          * ======================================================
          */
 
@@ -64,6 +64,7 @@ public class JwtAuthenticationFilter
                         0,
                         7)) {
 
+<<<<<<< HEAD
             jwt =
                     authHeader.substring(7);
         }
@@ -75,6 +76,9 @@ public class JwtAuthenticationFilter
          */
 
         if (jwt != null) {
+=======
+            jwt = authHeader.substring(7);
+>>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
 
             try {
 
@@ -92,7 +96,7 @@ public class JwtAuthenticationFilter
 
         /*
          * ======================================================
-         * AUTHENTICATE USER
+         * AUTHENTICATE
          * ======================================================
          */
 
@@ -104,6 +108,7 @@ public class JwtAuthenticationFilter
 
             try {
 
+<<<<<<< HEAD
                 /*
                  * Load CURRENT user from database.
                  *
@@ -111,6 +116,13 @@ public class JwtAuthenticationFilter
                  * user's family may have changed after the JWT
                  * was issued.
                  */
+=======
+                User currentUser =
+                        userDetailsService
+                                .getUserByEmail(
+                                        username
+                                );
+>>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
 
                 UserDetails userDetails =
                         userDetailsService
@@ -118,6 +130,7 @@ public class JwtAuthenticationFilter
                                         username
                                 );
 
+<<<<<<< HEAD
                 var currentUser =
                         userDetailsService
                                 .getUserByEmail(
@@ -131,6 +144,14 @@ public class JwtAuthenticationFilter
                  * 2. Current database family
                  */
 
+=======
+                /*
+                 * IMPORTANT:
+                 *
+                 * This checks the JWT against the
+                 * CURRENT database state.
+                 */
+>>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
                 boolean valid =
                         jwtService.isTokenValid(
                                 jwt,
@@ -158,6 +179,7 @@ public class JwtAuthenticationFilter
                             .setAuthentication(
                                     authentication
                             );
+<<<<<<< HEAD
 
                     System.out.println(
                             "JWT authenticated: "
@@ -178,6 +200,8 @@ public class JwtAuthenticationFilter
                                     + "is no longer valid for "
                                     + username
                     );
+=======
+>>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
                 }
 
             } catch (Exception e) {
@@ -200,4 +224,4 @@ public class JwtAuthenticationFilter
                 response
         );
     }
-}
+        }

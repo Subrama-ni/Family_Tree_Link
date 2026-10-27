@@ -153,11 +153,18 @@ public class SecurityConfig {
         /*
          * React frontend.
          */
-        configuration.setAllowedOrigins(
-                List.of(
-                        "http://localhost:5173"
-                )
-        );
+        String frontendUrl =
+        System.getenv("FRONTEND_URL");
+
+if (frontendUrl == null
+        || frontendUrl.isBlank()) {
+
+    frontendUrl = "http://localhost:5173";
+}
+
+configuration.setAllowedOrigins(
+        List.of(frontendUrl)
+);
 
         /*
          * HTTP methods used by the application.
