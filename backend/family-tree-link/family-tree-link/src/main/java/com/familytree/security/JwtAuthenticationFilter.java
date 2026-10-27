@@ -3,22 +3,16 @@ package com.familytree.security;
 import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.security.core.userdetails.UserDetails;
-
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.familytree.service.CustomUserDetailsService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -56,7 +50,6 @@ public class JwtAuthenticationFilter
 
         String jwt = null;
 
-
         /*
          * ======================================================
          * READ AUTHORIZATION HEADER
@@ -73,6 +66,15 @@ public class JwtAuthenticationFilter
 
             jwt =
                     authHeader.substring(7);
+        }
+
+        /*
+         * ======================================================
+         * EXTRACT USER FROM JWT
+         * ======================================================
+         */
+
+        if (jwt != null) {
 
             try {
 
@@ -88,7 +90,6 @@ public class JwtAuthenticationFilter
             }
         }
 
-
         /*
          * ======================================================
          * AUTHENTICATE USER
@@ -103,19 +104,37 @@ public class JwtAuthenticationFilter
 
             try {
 
+                /*
+                 * Load CURRENT user from database.
+                 *
+                 * This is extremely important because the
+                 * user's family may have changed after the JWT
+                 * was issued.
+                 */
+
                 UserDetails userDetails =
                         userDetailsService
                                 .loadUserByUsername(
                                         username
                                 );
 
+                var currentUser =
+                        userDetailsService
+                                .getUserByEmail(
+                                        username
+                                );
+
+                /*
+                 * Validate BOTH:
+                 *
+                 * 1. JWT identity
+                 * 2. Current database family
+                 */
+
                 boolean valid =
                         jwtService.isTokenValid(
                                 jwt,
-                                userDetailsService
-                                        .getUserByEmail(
-                                                username
-                                        )
+                                currentUser
                         );
 
                 if (valid) {
@@ -125,7 +144,8 @@ public class JwtAuthenticationFilter
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
-                                    userDetails.getAuthorities()
+                                    userDetails
+                                            .getAuthorities()
                             );
 
                     authentication.setDetails(
@@ -143,6 +163,21 @@ public class JwtAuthenticationFilter
                             "JWT authenticated: "
                                     + username
                     );
+
+                } else {
+
+                    /*
+                     * DO NOT authenticate the request.
+                     *
+                     * This is what revokes an old JWT when
+                     * the user's family membership changes.
+                     */
+
+                    System.out.println(
+                            "JWT rejected: family membership "
+                                    + "is no longer valid for "
+                                    + username
+                    );
                 }
 
             } catch (Exception e) {
@@ -153,7 +188,6 @@ public class JwtAuthenticationFilter
                 );
             }
         }
-
 
         /*
          * ======================================================
