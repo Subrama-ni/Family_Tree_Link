@@ -1,3 +1,4 @@
+
 package com.familytree.security;
 
 import java.io.IOException;
@@ -22,19 +23,14 @@ public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-
-    private final CustomUserDetailsService
-            userDetailsService;
+    private final CustomUserDetailsService userDetailsService;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
             CustomUserDetailsService userDetailsService) {
 
-        this.jwtService =
-                jwtService;
-
-        this.userDetailsService =
-                userDetailsService;
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
@@ -44,184 +40,70 @@ public class JwtAuthenticationFilter
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
-
-        String username = null;
+        String authHeader = request.getHeader("Authorization");
         String jwt = null;
+        String username = null;
 
-        /*
-         * ======================================================
-         * READ JWT
-         * ======================================================
-         */
-
+        // Read the Bearer token.
         if (authHeader != null
                 && authHeader.regionMatches(
-                        true,
-                        0,
-                        "Bearer ",
-                        0,
-                        7)) {
+                        true, 0, "Bearer ", 0, 7)) {
 
-<<<<<<< HEAD
-            jwt =
-                    authHeader.substring(7);
-        }
+            jwt = authHeader.substring(7).trim();
 
-        /*
-         * ======================================================
-         * EXTRACT USER FROM JWT
-         * ======================================================
-         */
-
-        if (jwt != null) {
-=======
-            jwt = authHeader.substring(7);
->>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
-
-            try {
-
-                username =
-                        jwtService.extractEmail(jwt);
-
-            } catch (Exception e) {
-
-                System.out.println(
-                        "Invalid JWT: "
-                                + e.getMessage()
-                );
+            if (!jwt.isEmpty()) {
+                try {
+                    username = jwtService.extractEmail(jwt);
+                } catch (Exception e) {
+                    System.out.println("Invalid JWT");
+                }
             }
         }
 
-        /*
-         * ======================================================
-         * AUTHENTICATE
-         * ======================================================
-         */
-
+        // Authenticate only when no authentication exists yet.
         if (username != null
-                && SecurityContextHolder
-                        .getContext()
-                        .getAuthentication()
-                        == null) {
+                && SecurityContextHolder.getContext()
+                        .getAuthentication() == null) {
 
             try {
-
-<<<<<<< HEAD
-                /*
-                 * Load CURRENT user from database.
-                 *
-                 * This is extremely important because the
-                 * user's family may have changed after the JWT
-                 * was issued.
-                 */
-=======
+                // Load the current user from the database.
                 User currentUser =
-                        userDetailsService
-                                .getUserByEmail(
-                                        username
-                                );
->>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
+                        userDetailsService.getUserByEmail(username);
 
                 UserDetails userDetails =
-                        userDetailsService
-                                .loadUserByUsername(
-                                        username
-                                );
+                        userDetailsService.loadUserByUsername(username);
 
-<<<<<<< HEAD
-                var currentUser =
-                        userDetailsService
-                                .getUserByEmail(
-                                        username
-                                );
-
-                /*
-                 * Validate BOTH:
-                 *
-                 * 1. JWT identity
-                 * 2. Current database family
-                 */
-
-=======
-                /*
-                 * IMPORTANT:
-                 *
-                 * This checks the JWT against the
-                 * CURRENT database state.
-                 */
->>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
+                // Verify identity and current family membership.
                 boolean valid =
-                        jwtService.isTokenValid(
-                                jwt,
-                                currentUser
-                        );
+                        jwtService.isTokenValid(jwt, currentUser);
 
                 if (valid) {
-
-                    UsernamePasswordAuthenticationToken
-                            authentication =
+                    UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
-                                    userDetails
-                                            .getAuthorities()
-                            );
+                                    userDetails.getAuthorities());
 
                     authentication.setDetails(
                             new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+                                    .buildDetails(request));
 
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(
-                                    authentication
-                            );
-<<<<<<< HEAD
-
-                    System.out.println(
-                            "JWT authenticated: "
-                                    + username
-                    );
-
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authentication);
                 } else {
-
-                    /*
-                     * DO NOT authenticate the request.
-                     *
-                     * This is what revokes an old JWT when
-                     * the user's family membership changes.
-                     */
-
                     System.out.println(
-                            "JWT rejected: family membership "
-                                    + "is no longer valid for "
-                                    + username
-                    );
-=======
->>>>>>> c7b61ee503c7cbdb5f4980f931cd30796724d39b
+                            "JWT rejected: token identity or family "
+                                    + "membership is no longer valid.");
                 }
 
             } catch (Exception e) {
-
                 System.out.println(
                         "JWT authentication failed: "
-                                + e.getMessage()
-                );
+                                + e.getMessage());
             }
         }
 
-        /*
-         * ======================================================
-         * CONTINUE REQUEST
-         * ======================================================
-         */
-
-        filterChain.doFilter(
-                request,
-                response
-        );
+        // Continue the filter chain.
+        filterChain.doFilter(request, response);
     }
-        }
+}
