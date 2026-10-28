@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function GalleryPage() {
-  const API_URL = "http://localhost:8080";
+  const API_URL = "";
 
   const [members, setMembers] = useState([]);
   const [photos, setPhotos] = useState([]);

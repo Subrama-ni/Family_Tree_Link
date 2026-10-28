@@ -103,7 +103,7 @@ function MemberProfilePage() {
         <img
           src={
             member.imagePath
-              ? `http://localhost:8080/uploads/${member.imagePath}`
+              ? `/uploads/${member.imagePath}`
               : "/default-profile.png"
           }
           alt={member.fullName}

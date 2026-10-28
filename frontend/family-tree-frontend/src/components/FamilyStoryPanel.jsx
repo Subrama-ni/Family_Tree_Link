@@ -255,7 +255,7 @@ function FamilyStoryPanel({ member, onClose }) {
       return null;
     }
 
-    return `http://localhost:8080/uploads/${imagePath}`;
+    return `/uploads/${imagePath}`;
   };
 
   if (!member) {

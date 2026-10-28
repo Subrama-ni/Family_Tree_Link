@@ -15,7 +15,7 @@ function MemberProfile() {
 
   const fetchMember = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/members");
+      const response = await axios.get("/api/members");
 
       const foundMember = response.data.find((m) => m.id === parseInt(id));
 

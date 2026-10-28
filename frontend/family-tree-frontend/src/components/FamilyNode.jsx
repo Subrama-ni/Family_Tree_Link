@@ -102,7 +102,7 @@ function FamilyNode({ data }) {
 
   const updateMember = async () => {
     try {
-      await api.put(`http://localhost:8080/api/members/${data.id}`, {
+      await api.put(`/api/members/${data.id}`, {
         fullName: editData.fullName,
 
         gender: editData.gender,
@@ -138,7 +138,7 @@ function FamilyNode({ data }) {
     }
 
     try {
-      await api.delete(`http://localhost:8080/api/members/${data.id}`);
+      await api.delete(`/api/members/${data.id}`);
 
       alert("Member Deleted");
 
@@ -174,11 +174,11 @@ function FamilyNode({ data }) {
         },
       };
 
-      await api.post("http://localhost:8080/api/events", payload);
+      await api.post("/api/events", payload);
 
       alert("Life Event Added");
 
-      const updated = await api.get("http://localhost:8080/api/events");
+      const updated = await api.get("/api/events");
 
       const memberEvents = updated.data.filter(
         (event) => event.familyMember?.id === data.id,
@@ -219,7 +219,7 @@ function FamilyNode({ data }) {
 
       setShowFamilyStory(false);
 
-      const response = await api.get("http://localhost:8080/api/members");
+      const response = await api.get("/api/members");
 
       setFamilyMembers(response.data);
 
@@ -317,7 +317,7 @@ function FamilyNode({ data }) {
         relationshipType: relationshipData.relationshipType,
       };
 
-      await api.post("http://localhost:8080/api/relationships", payload);
+      await api.post("/api/relationships", payload);
 
       alert("Relationship Added Successfully");
 
@@ -367,7 +367,7 @@ function FamilyNode({ data }) {
     setShowFamilyStory(false);
 
     try {
-      const response = await api.get("http://localhost:8080/api/events");
+      const response = await api.get("/api/events");
 
       const memberEvents = response.data.filter(
         (event) => event.familyMember?.id === data.id,
@@ -429,7 +429,7 @@ function FamilyNode({ data }) {
           }}
         >
           <img
-            src={`http://localhost:8080/uploads/${data.imagePath}`}
+            src={`/uploads/${data.imagePath}`}
             alt="member"
             style={{
               width: "100%",
@@ -626,7 +626,7 @@ function FamilyNode({ data }) {
                 ================================================== */}
 
             <img
-              src={`http://localhost:8080/uploads/${data.imagePath}`}
+              src={`/uploads/${data.imagePath}`}
               alt="member"
               style={{
                 width: "100%",

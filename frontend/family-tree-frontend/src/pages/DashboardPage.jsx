@@ -483,7 +483,7 @@ function DashboardPage() {
     }
 
     try {
-      const response = await fetch("http://localhost:8080/api/families/leave", {
+      const response = await fetch("/api/families/leave", {
         method: "POST",
         credentials: "include",
         headers: {

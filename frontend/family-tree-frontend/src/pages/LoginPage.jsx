@@ -52,10 +52,7 @@ function LoginPage() {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/auth/login",
-        formData,
-      );
+      const response = await axios.post("/api/auth/login", formData);
 
       const data = response.data;
 
@@ -120,12 +117,9 @@ function LoginPage() {
     try {
       setForgotLoading(true);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/auth/forgot-password",
-        {
-          email: forgotEmail.trim(),
-        },
-      );
+      const response = await axios.post("/api/auth/forgot-password", {
+        email: forgotEmail.trim(),
+      });
 
       console.log(response.data);
 

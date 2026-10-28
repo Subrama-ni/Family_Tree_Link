@@ -23,7 +23,7 @@ function TimelinePage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/events");
+      const response = await axios.get("/api/events");
 
       const sorted = response.data.sort(
         (a, b) => new Date(b.eventDate) - new Date(a.eventDate),
@@ -37,7 +37,7 @@ function TimelinePage() {
 
   const fetchMembers = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/api/members");
+      const response = await axios.get("/api/members");
 
       setMembers(response.data);
     } catch (error) {
@@ -54,7 +54,7 @@ function TimelinePage() {
 
   const addEvent = async () => {
     try {
-      await axios.post("http://localhost:8080/api/events", {
+      await axios.post("/api/events", {
         title: formData.title,
         description: formData.description,
         eventDate: formData.eventDate,
@@ -80,7 +80,7 @@ function TimelinePage() {
   const updateEvent = async () => {
     try {
       await axios.put(
-        `http://localhost:8080/api/events/${editingId}`,
+        `/api/events/${editingId}`,
 
         {
           title: formData.title,
@@ -119,7 +119,7 @@ function TimelinePage() {
     }
 
     try {
-      await axios.delete(`http://localhost:8080/api/events/${id}`);
+      await axios.delete(`/api/events/${id}`);
 
       fetchEvents();
     } catch (error) {

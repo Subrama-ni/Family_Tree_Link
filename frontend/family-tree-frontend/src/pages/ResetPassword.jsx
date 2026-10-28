@@ -69,13 +69,10 @@ function ResetPassword() {
     try {
       setLoading(true);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/auth/reset-password",
-        {
-          token,
-          newPassword: formData.password,
-        },
-      );
+      const response = await axios.post("/api/auth/reset-password", {
+        token,
+        newPassword: formData.password,
+      });
 
       console.log(response.data);
 

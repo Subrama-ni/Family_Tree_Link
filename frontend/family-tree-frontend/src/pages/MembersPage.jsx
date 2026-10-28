@@ -844,7 +844,7 @@ function MembersPage() {
                   <div className="member-image-wrapper">
                     {member.imagePath ? (
                       <img
-                        src={`http://localhost:8080/uploads/${member.imagePath}`}
+                        src={`/uploads/${member.imagePath}`}
                         alt={member.fullName}
                       />
                     ) : (
@@ -942,7 +942,7 @@ function MembersPage() {
             <div className="edit-photo">
               {editingMember.imagePath ? (
                 <img
-                  src={`http://localhost:8080/uploads/${editingMember.imagePath}`}
+                  src={`/uploads/${editingMember.imagePath}`}
                   alt={editingMember.fullName}
                 />
               ) : (
