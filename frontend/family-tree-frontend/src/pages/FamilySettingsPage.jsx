@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 
-const API_BASE_URL = "/api";
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  ? `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, "")}/api`
+  : "http://localhost:8080/api";
 function FamilySettingsPage() {
   /*
    * ============================================================
@@ -107,6 +108,14 @@ function FamilySettingsPage() {
         throw new Error("Failed to load family settings.");
       }
 
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          `Expected JSON from the backend, but received ${contentType || "an unknown content type"}.`,
+        );
+      }
+
       const data = await response.json();
 
       setSettings(data);
@@ -184,18 +193,29 @@ function FamilySettingsPage() {
         headers: getAuthHeaders(),
       });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
+      const contentType = response.headers.get("content-type") || "";
 
-        throw new Error(data?.message || "Failed to load family members.");
+      if (!response.ok) {
+        let message = "Failed to load family members.";
+
+        if (contentType.includes("application/json")) {
+          const data = await response.json().catch(() => null);
+          message = data?.message || message;
+        }
+
+        throw new Error(message);
+      }
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          "The backend returned an unexpected response while loading family members.",
+        );
       }
 
       const data = await response.json();
-
       setFamilyMembers(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
-
+      console.error("Failed to load family members:", err);
       setError(err.message || "Unable to load family members.");
     } finally {
       setLoadingMembers(false);
