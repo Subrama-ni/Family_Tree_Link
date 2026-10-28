@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
-
+import api from "../api/axios";
 function LoginPage() {
   const navigate = useNavigate();
 
@@ -52,7 +51,7 @@ function LoginPage() {
     try {
       setLoading(true);
 
-      const response = await axios.post("/api/auth/login", formData);
+      const response = await api.post("/api/auth/login", formData);
 
       const data = response.data;
 
@@ -117,7 +116,7 @@ function LoginPage() {
     try {
       setForgotLoading(true);
 
-      const response = await axios.post("/api/auth/forgot-password", {
+      const response = await api.post("/api/auth/forgot-password", {
         email: forgotEmail.trim(),
       });
 
