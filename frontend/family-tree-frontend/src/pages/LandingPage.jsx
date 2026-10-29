@@ -1,522 +1,840 @@
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LandingPage.css";
 
-function LandingPage() {
-  const navigate = useNavigate();
+const features = [
+  {
+    icon: "⌘",
+    number: "01",
+    title: "Interactive family tree",
+    description:
+      "Explore your family through a visual tree that brings generations and connections together.",
+    className: "feature-green",
+  },
+  {
+    icon: "♧",
+    number: "02",
+    title: "Family members",
+    description:
+      "Create meaningful member profiles with names, important dates, photos and personal details.",
+    className: "feature-gold",
+  },
+  {
+    icon: "∞",
+    number: "03",
+    title: "Relationships",
+    description:
+      "Connect relatives and make the relationships between generations easier to understand.",
+    className: "feature-lilac",
+  },
+  {
+    icon: "◷",
+    number: "04",
+    title: "Family timeline",
+    description:
+      "Keep birthdays, milestones, memorable moments and important family events in one place.",
+    className: "feature-blue",
+  },
+  {
+    icon: "▧",
+    number: "05",
+    title: "Photo gallery",
+    description:
+      "Bring family memories together in a dedicated space for the photos you treasure.",
+    className: "feature-pink",
+  },
+  {
+    icon: "↗",
+    number: "06",
+    title: "Family invitations",
+    description:
+      "Invite relatives to join your family space and participate in preserving your shared story.",
+    className: "feature-orange",
+  },
+];
 
+const familyMembers = [
+  {
+    name: "Grandfather",
+    role: "Generation 1",
+    symbol: "G",
+    color: "avatar-gold",
+  },
+  { name: "Father", role: "Generation 2", symbol: "F", color: "avatar-green" },
+  { name: "Mother", role: "Generation 2", symbol: "M", color: "avatar-pink" },
+  { name: "You", role: "Generation 3", symbol: "Y", color: "avatar-blue" },
+];
+
+const steps = [
+  {
+    number: "01",
+    title: "Create your family",
+    description:
+      "Start your own family space and give your shared story a home.",
+  },
+  {
+    number: "02",
+    title: "Add your members",
+    description: "Build profiles for the people who make your family unique.",
+  },
+  {
+    number: "03",
+    title: "Connect relationships",
+    description:
+      "Link family members and explore how your generations connect.",
+  },
+  {
+    number: "04",
+    title: "Preserve your story",
+    description:
+      "Collect important dates, photographs and memories in one place.",
+  },
+];
+
+function SectionLabel({ children }) {
   return (
-    <div className="landing-page">
-      {/* ================================
-          NAVIGATION
-      ================================= */}
-
-      <header className="landing-navbar">
-        <div
-          className="landing-brand"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        >
-          <div className="landing-brand-mark">
-            <span className="brand-root"></span>
-            <span className="brand-branch branch-left"></span>
-            <span className="brand-branch branch-right"></span>
-            <span className="brand-leaf leaf-one"></span>
-            <span className="brand-leaf leaf-two"></span>
-            <span className="brand-leaf leaf-three"></span>
-            <span className="brand-leaf leaf-four"></span>
-          </div>
-
-          <div className="landing-brand-name">
-            <span>Family</span>
-            <strong>Tree</strong>
-            <span>Link</span>
-          </div>
-        </div>
-
-        <nav className="landing-nav-links">
-          <a href="#features">Features</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#memories">Memories</a>
-        </nav>
-
-        <div className="landing-nav-actions">
-          <button
-            className="landing-login-button"
-            onClick={() => navigate("/login")}
-          >
-            Log in
-          </button>
-
-          <button
-            className="landing-signup-button"
-            onClick={() => navigate("/register")}
-          >
-            Get started
-            <span>→</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ================================
-          HERO
-      ================================= */}
-
-      <main>
-        <section className="landing-hero">
-          <div className="hero-background-glow hero-glow-one"></div>
-          <div className="hero-background-glow hero-glow-two"></div>
-
-          <div className="hero-content">
-            <div className="hero-eyebrow">
-              <span className="eyebrow-dot"></span>
-              YOUR FAMILY. YOUR STORY. YOUR LEGACY.
-            </div>
-
-            <h1>
-              Every family has
-              <br />a story worth <em>remembering.</em>
-            </h1>
-
-            <p className="hero-description">
-              Build your family tree, connect generations, preserve precious
-              memories, and keep your family's story alive for generations to
-              come.
-            </p>
-
-            <div className="hero-actions">
-              <button
-                className="hero-primary-button"
-                onClick={() => navigate("/register")}
-              >
-                <span>Start your family tree</span>
-                <span className="hero-button-arrow">→</span>
-              </button>
-
-              <button
-                className="hero-secondary-button"
-                onClick={() =>
-                  document
-                    .getElementById("how-it-works")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                See how it works
-                <span>↓</span>
-              </button>
-            </div>
-
-            <div className="hero-trust">
-              <div className="trust-avatars">
-                <span>R</span>
-                <span>S</span>
-                <span>A</span>
-                <span>M</span>
-              </div>
-
-              <div className="trust-text">
-                <strong>Built for families</strong>
-                <span>Connect the generations that matter.</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ================================
-              HERO TREE VISUAL
-          ================================= */}
-
-          <div className="hero-tree-container">
-            <div className="tree-orbit orbit-large"></div>
-            <div className="tree-orbit orbit-small"></div>
-
-            <div className="hero-tree-glow"></div>
-
-            <div className="family-tree-visual">
-              <div className="tree-line vertical-line main-line"></div>
-              <div className="tree-line horizontal-line main-horizontal"></div>
-
-              <div className="tree-line vertical-line child-line-left"></div>
-              <div className="tree-line vertical-line child-line-right"></div>
-
-              <div className="tree-line horizontal-line children-horizontal"></div>
-
-              <div className="family-person person-grandfather">
-                <div className="person-avatar avatar-one">R</div>
-                <span>Grandfather</span>
-              </div>
-
-              <div className="family-person person-grandmother">
-                <div className="person-avatar avatar-two">A</div>
-                <span>Grandmother</span>
-              </div>
-
-              <div className="family-person person-parent">
-                <div className="person-avatar avatar-three">S</div>
-                <span>Parent</span>
-              </div>
-
-              <div className="family-person person-spouse">
-                <div className="person-avatar avatar-four">M</div>
-                <span>Spouse</span>
-              </div>
-
-              <div className="family-person person-child-one">
-                <div className="person-avatar avatar-five">K</div>
-                <span>Child</span>
-              </div>
-
-              <div className="family-person person-child-two">
-                <div className="person-avatar avatar-six">N</div>
-                <span>Child</span>
-              </div>
-
-              <div className="tree-center-node">
-                <div className="center-tree-icon">✦</div>
-                <strong>Your Family</strong>
-                <span>Connected across generations</span>
-              </div>
-            </div>
-
-            <div className="tree-floating-card floating-card-top">
-              <span className="floating-icon">✦</span>
-              <div>
-                <strong>4 generations</strong>
-                <small>connected</small>
-              </div>
-            </div>
-
-            <div className="tree-floating-card floating-card-bottom">
-              <span className="floating-icon">♡</span>
-              <div>
-                <strong>Memories</strong>
-                <small>preserved forever</small>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================================
-            INTRO
-        ================================= */}
-
-        <section className="landing-intro">
-          <div className="section-label">A PLACE FOR YOUR STORY</div>
-
-          <h2>
-            More than a family tree.
-            <br />
-            <span>A home for your family's history.</span>
-          </h2>
-
-          <p>
-            Family Tree Link brings your people, relationships, memories, and
-            stories together in one beautiful place.
-          </p>
-        </section>
-
-        {/* ================================
-            FEATURES
-        ================================= */}
-
-        <section className="landing-features" id="features">
-          <div className="section-heading">
-            <div className="section-label">WHAT YOU CAN DO</div>
-
-            <h2>
-              Everything your family
-              <br />
-              needs to stay <em>connected.</em>
-            </h2>
-          </div>
-
-          <div className="feature-grid">
-            <article className="feature-card feature-card-large">
-              <div className="feature-number">01</div>
-
-              <div className="feature-icon">⌘</div>
-
-              <h3>Build your family tree</h3>
-
-              <p>
-                Map generations, relationships, parents, children, and partners
-                in a visual family tree that grows with your family.
-              </p>
-
-              <div className="mini-tree-preview">
-                <span></span>
-                <i></i>
-                <span></span>
-                <i></i>
-                <span></span>
-              </div>
-            </article>
-
-            <article className="feature-card">
-              <div className="feature-number">02</div>
-
-              <div className="feature-icon">♡</div>
-
-              <h3>Preserve memories</h3>
-
-              <p>
-                Keep photographs, stories, milestones, and meaningful moments
-                connected to the people who lived them.
-              </p>
-            </article>
-
-            <article className="feature-card">
-              <div className="feature-number">03</div>
-
-              <div className="feature-icon">∞</div>
-
-              <h3>Connect generations</h3>
-
-              <p>
-                Invite family members and create a shared space where everyone
-                can discover where they belong.
-              </p>
-            </article>
-
-            <article className="feature-card feature-card-wide">
-              <div className="feature-number">04</div>
-
-              <div className="feature-icon">◷</div>
-
-              <div>
-                <h3>Tell the story through time</h3>
-
-                <p>
-                  From the earliest memories to the newest generation, create a
-                  timeline that makes your family's journey easy to explore.
-                </p>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        {/* ================================
-            HOW IT WORKS
-        ================================= */}
-
-        <section className="landing-how-it-works" id="how-it-works">
-          <div className="how-content">
-            <div className="section-label">HOW IT WORKS</div>
-
-            <h2>
-              Start with one person.
-              <br />
-              <em>Build something timeless.</em>
-            </h2>
-
-            <p>
-              Creating your family tree is simple. Start with yourself or a
-              family member and gradually connect the generations around you.
-            </p>
-
-            <div className="steps">
-              <div className="step">
-                <span>01</span>
-                <div>
-                  <h3>Create your family</h3>
-                  <p>Start a private space for your family.</p>
-                </div>
-              </div>
-
-              <div className="step">
-                <span>02</span>
-                <div>
-                  <h3>Add your people</h3>
-                  <p>Build relationships between generations.</p>
-                </div>
-              </div>
-
-              <div className="step">
-                <span>03</span>
-                <div>
-                  <h3>Invite your family</h3>
-                  <p>Bring the people you love into the story.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="how-visual">
-            <div className="how-visual-card">
-              <div className="visual-card-header">
-                <span>Family Tree</span>
-                <span>● Connected</span>
-              </div>
-
-              <div className="visual-tree">
-                <div className="visual-node visual-node-top">
-                  <span>R</span>
-                  <strong>Robert</strong>
-                </div>
-
-                <div className="visual-connector"></div>
-
-                <div className="visual-node-row">
-                  <div className="visual-node">
-                    <span>A</span>
-                    <strong>Anna</strong>
-                  </div>
-
-                  <div className="visual-node visual-node-highlight">
-                    <span>S</span>
-                    <strong>You</strong>
-                  </div>
-
-                  <div className="visual-node">
-                    <span>M</span>
-                    <strong>Michael</strong>
-                  </div>
-                </div>
-
-                <div className="visual-connector connector-bottom"></div>
-
-                <div className="visual-node-row children">
-                  <div className="visual-node">
-                    <span>K</span>
-                    <strong>Kay</strong>
-                  </div>
-
-                  <div className="visual-node">
-                    <span>N</span>
-                    <strong>Noah</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ================================
-            MEMORIES
-        ================================= */}
-
-        <section className="landing-memories" id="memories">
-          <div className="memories-heading">
-            <div className="section-label">THE MEMORIES BETWEEN THE NAMES</div>
-
-            <h2>
-              Because a family tree
-              <br />
-              should feel <em>alive.</em>
-            </h2>
-
-            <p>
-              Names tell you who someone was. Stories tell you why they
-              mattered.
-            </p>
-          </div>
-
-          <div className="memory-cards">
-            <article className="memory-card">
-              <div className="memory-image memory-image-one">
-                <span>Family Stories</span>
-              </div>
-
-              <div className="memory-card-content">
-                <small>STORIES</small>
-                <h3>Remember the stories behind the names.</h3>
-              </div>
-            </article>
-
-            <article className="memory-card">
-              <div className="memory-image memory-image-two">
-                <span>Moments</span>
-              </div>
-
-              <div className="memory-card-content">
-                <small>MEMORIES</small>
-                <h3>Keep the moments that made your family.</h3>
-              </div>
-            </article>
-
-            <article className="memory-card">
-              <div className="memory-image memory-image-three">
-                <span>Generations</span>
-              </div>
-
-              <div className="memory-card-content">
-                <small>LEGACY</small>
-                <h3>Give the next generation a story to discover.</h3>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        {/* ================================
-            PRIVACY
-        ================================= */}
-
-        <section className="landing-privacy">
-          <div className="privacy-symbol">⌘</div>
-
-          <div>
-            <div className="section-label">YOUR FAMILY. YOUR SPACE.</div>
-
-            <h2>Your family's story belongs to your family.</h2>
-
-            <p>
-              Family Tree Link is designed around the idea that your family's
-              history should remain yours. We'll make privacy and control a
-              fundamental part of the experience.
-            </p>
-          </div>
-        </section>
-
-        {/* ================================
-            CTA
-        ================================= */}
-
-        <section className="landing-cta">
-          <div className="cta-glow"></div>
-
-          <div className="section-label">YOUR STORY STARTS HERE</div>
-
-          <h2>
-            Start building the tree
-            <br />
-            your family will <em>remember.</em>
-          </h2>
-
-          <p>One person. One story. One connection at a time.</p>
-
-          <button className="cta-button" onClick={() => navigate("/register")}>
-            Create your family tree
-            <span>→</span>
-          </button>
-        </section>
-      </main>
-
-      {/* ================================
-          FOOTER
-      ================================= */}
-
-      <footer className="landing-footer">
-        <div className="footer-brand">
-          <div className="footer-brand-mark">✦</div>
-
-          <div>
-            <strong>Family Tree Link</strong>
-            <span>Connected across generations.</span>
-          </div>
-        </div>
-
-        <div className="footer-links">
-          <a href="#features">Features</a>
-          <a href="#how-it-works">How it works</a>
-          <a href="#memories">Memories</a>
-          <button onClick={() => navigate("/login")}>Log in</button>
-          <button onClick={() => navigate("/register")}>Get started</button>
-        </div>
-
-        <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Family Tree Link</span>
-          <span>Preserve what matters.</span>
-        </div>
-      </footer>
+    <div className="ft-section-label">
+      <span className="ft-label-dot" />
+      {children}
     </div>
   );
 }
 
-export default LandingPage;
+function ArrowIcon({ diagonal = false }) {
+  return (
+    <span className="ft-arrow-icon" aria-hidden="true">
+      {diagonal ? "↗" : "→"}
+    </span>
+  );
+}
+
+function PrimaryButton({ children, onClick, small = false, type = "button" }) {
+  return (
+    <button
+      className={`ft-button ${small ? "ft-button-small" : ""}`}
+      type={type}
+      onClick={onClick}
+    >
+      <span className="ft-button-label">{children}</span>
+      <ArrowIcon diagonal />
+    </button>
+  );
+}
+
+function FamilyTreePreview() {
+  return (
+    <div className="ft-tree-visual" aria-label="Illustration of a family tree">
+      <div className="ft-orbit ft-orbit-one" />
+      <div className="ft-orbit ft-orbit-two" />
+
+      <div className="ft-tree-heading">
+        <span className="ft-tree-heading-icon">✳</span>
+        <div>
+          <strong>Our family</strong>
+          <span>A story across generations</span>
+        </div>
+        <span className="ft-live-dot" />
+      </div>
+
+      <div className="ft-tree-canvas">
+        <svg
+          className="ft-tree-connectors"
+          viewBox="0 0 360 290"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path d="M180 60 V95 H92 V128" />
+          <path d="M180 95 H268 V128" />
+          <path d="M92 177 V208 H180 V225" />
+          <path d="M268 177 V208 H180" />
+        </svg>
+
+        <div className="ft-person ft-person-grand">
+          <div className="ft-person-avatar avatar-gold">G</div>
+          <strong>Grandparents</strong>
+          <span>Generation 1</span>
+        </div>
+
+        <div className="ft-person ft-person-father">
+          <div className="ft-person-avatar avatar-green">F</div>
+          <strong>Father</strong>
+          <span>Generation 2</span>
+        </div>
+
+        <div className="ft-person ft-person-mother">
+          <div className="ft-person-avatar avatar-pink">M</div>
+          <strong>Mother</strong>
+          <span>Generation 2</span>
+        </div>
+
+        <div className="ft-person ft-person-you">
+          <div className="ft-person-avatar avatar-blue">Y</div>
+          <strong>You</strong>
+          <span>Generation 3</span>
+        </div>
+      </div>
+
+      <div className="ft-tree-footer">
+        <div className="ft-mini-avatars" aria-hidden="true">
+          <span>G</span>
+          <span>F</span>
+          <span>M</span>
+          <span>Y</span>
+        </div>
+        <div className="ft-tree-footer-copy">
+          <strong>Your story, connected.</strong>
+          <span>A visual family tree preview</span>
+        </div>
+        <span className="ft-footer-sparkle">✦</span>
+      </div>
+
+      <div className="ft-float-note ft-note-top">
+        <span className="ft-note-icon">♡</span>
+        <div>
+          <strong>Made for family</strong>
+          <span>Every generation matters</span>
+        </div>
+      </div>
+
+      <div className="ft-float-note ft-note-bottom">
+        <span className="ft-note-icon ft-note-icon-gold">✦</span>
+        <div>
+          <strong>Memories that last</strong>
+          <span>Keep your story together</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelinePreview() {
+  return (
+    <div className="ft-timeline-card">
+      <div className="ft-preview-heading">
+        <div>
+          <span className="ft-preview-eyebrow">YOUR FAMILY STORY</span>
+          <h3>Little moments. Big memories.</h3>
+        </div>
+        <span className="ft-preview-icon">◷</span>
+      </div>
+
+      <div className="ft-timeline-list">
+        <div className="ft-timeline-item">
+          <div className="ft-timeline-marker marker-gold">✦</div>
+          <div className="ft-timeline-content">
+            <span className="ft-timeline-date">A SPECIAL DAY</span>
+            <strong>Family celebration</strong>
+            <p>Make space for moments worth remembering.</p>
+          </div>
+        </div>
+
+        <div className="ft-timeline-item">
+          <div className="ft-timeline-marker marker-green">♡</div>
+          <div className="ft-timeline-content">
+            <span className="ft-timeline-date">A HAPPY MEMORY</span>
+            <strong>Together through generations</strong>
+            <p>Keep meaningful milestones close to your heart.</p>
+          </div>
+        </div>
+
+        <div className="ft-timeline-item">
+          <div className="ft-timeline-marker marker-lilac">✿</div>
+          <div className="ft-timeline-content">
+            <span className="ft-timeline-date">A FAMILY TRADITION</span>
+            <strong>Stories passed down</strong>
+            <p>Celebrate the moments that shape your family.</p>
+          </div>
+        </div>
+      </div>
+      <p className="ft-demo-note">
+        Illustrative preview · Add your own family events
+      </p>
+    </div>
+  );
+}
+
+function GalleryPreview() {
+  return (
+    <div className="ft-gallery-card">
+      <div className="ft-gallery-header">
+        <div>
+          <span className="ft-preview-eyebrow">THE MEMORY CORNER</span>
+          <h3>Every picture tells a story.</h3>
+        </div>
+        <span className="ft-gallery-symbol">▧</span>
+      </div>
+
+      <div className="ft-memory-grid">
+        <div className="ft-memory-tile memory-tile-large">
+          <span className="ft-memory-art art-sun">☀</span>
+          <span className="ft-memory-caption">Golden moments</span>
+        </div>
+        <div className="ft-memory-tile memory-tile-green">
+          <span className="ft-memory-art">❋</span>
+          <span className="ft-memory-caption">Together</span>
+        </div>
+        <div className="ft-memory-tile memory-tile-lilac">
+          <span className="ft-memory-art">✿</span>
+          <span className="ft-memory-caption">Our traditions</span>
+        </div>
+        <div className="ft-memory-tile memory-tile-pink">
+          <span className="ft-memory-art">♡</span>
+          <span className="ft-memory-caption">Always family</span>
+        </div>
+      </div>
+
+      <p className="ft-demo-note">
+        Illustrative preview · Your gallery can hold your memories
+      </p>
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll("[data-reveal]");
+
+    if (!("IntersectionObserver" in window)) {
+      elements.forEach((element) => element.classList.add("ft-visible"));
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("ft-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -35px 0px" },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const closeMenu = () => setMenuOpen(false);
+    window.addEventListener("resize", closeMenu);
+    return () => window.removeEventListener("resize", closeMenu);
+  }, []);
+
+  const goToSection = (id) => {
+    setMenuOpen(false);
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const goToRegister = () => navigate("/register");
+  const goToLogin = () => navigate("/login");
+
+  return (
+    <main className="ft-page">
+      <div className="ft-background-glow ft-glow-one" aria-hidden="true" />
+      <div className="ft-background-glow ft-glow-two" aria-hidden="true" />
+
+      <header className="ft-navbar">
+        <button
+          className="ft-brand"
+          onClick={() => goToSection("home")}
+          aria-label="Family Tree Link home"
+        >
+          <span className="ft-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <path
+                d="M20 5 32 12v14L20 33 8 26V12L20 5Z"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              />
+              <path
+                d="M20 12v9m0-5-6-4m6 4 6-4M20 21l-6 4m6-4 6 4"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+              <circle cx="20" cy="11" r="2.4" fill="currentColor" />
+              <circle cx="13" cy="12" r="2.4" fill="currentColor" />
+              <circle cx="27" cy="12" r="2.4" fill="currentColor" />
+              <circle cx="20" cy="22" r="2.4" fill="currentColor" />
+              <circle cx="13" cy="26" r="2.4" fill="currentColor" />
+              <circle cx="27" cy="26" r="2.4" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="ft-brand-name">
+            Family Tree<span>Link</span>
+          </span>
+        </button>
+
+        <button
+          className="ft-menu-toggle"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label={
+            menuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
+          aria-expanded={menuOpen}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <nav className={`ft-nav-links ${menuOpen ? "ft-nav-open" : ""}`}>
+          <button onClick={() => goToSection("features")}>Features</button>
+          <button onClick={() => goToSection("tour")}>Explore</button>
+          <button onClick={() => goToSection("journey")}>How it works</button>
+          <button onClick={() => goToSection("about")}>Our purpose</button>
+
+          <div className="ft-mobile-actions">
+            <button className="ft-login-button" onClick={goToLogin}>
+              Log in
+            </button>
+            <PrimaryButton onClick={goToRegister} small>
+              Get started
+            </PrimaryButton>
+          </div>
+        </nav>
+
+        <div className="ft-desktop-actions">
+          <button className="ft-login-button" onClick={goToLogin}>
+            Log in
+          </button>
+          <PrimaryButton onClick={goToRegister} small>
+            Get started
+          </PrimaryButton>
+        </div>
+      </header>
+
+      <section className="ft-hero" id="home">
+        <div className="ft-hero-copy">
+          <SectionLabel>YOUR FAMILY. YOUR STORY.</SectionLabel>
+
+          <h1>
+            Every connection
+            <br />
+            tells a <span className="ft-heading-highlight">story.</span>
+          </h1>
+
+          <p className="ft-hero-description">
+            Your family is more than names on a tree. It is a collection of
+            people, memories and moments that deserve to be connected and
+            remembered.
+          </p>
+
+          <div className="ft-hero-actions">
+            <PrimaryButton onClick={goToRegister}>
+              Start your family tree
+            </PrimaryButton>
+            <button
+              className="ft-secondary-button"
+              onClick={() => goToSection("tour")}
+            >
+              <span className="ft-play-icon">▷</span>
+              Explore the experience
+            </button>
+          </div>
+
+          <div className="ft-hero-note">
+            <span className="ft-note-check">✓</span>
+            <span>A meaningful space for your family story</span>
+          </div>
+
+          <div className="ft-hero-decoration" aria-hidden="true">
+            <span>✳</span>
+            <span>✦</span>
+            <span>·</span>
+          </div>
+        </div>
+
+        <div className="ft-hero-art">
+          <div className="ft-hero-art-backdrop" aria-hidden="true">
+            <span className="ft-honeycomb honeycomb-a" />
+            <span className="ft-honeycomb honeycomb-b" />
+            <span className="ft-honeycomb honeycomb-c" />
+            <span className="ft-honeycomb honeycomb-d" />
+            <span className="ft-honeycomb honeycomb-e" />
+          </div>
+          <FamilyTreePreview />
+        </div>
+
+        <button
+          className="ft-scroll-cue"
+          onClick={() => goToSection("introduction")}
+          aria-label="Scroll to discover more"
+        >
+          <span className="ft-scroll-line" />
+          Discover more
+          <span className="ft-scroll-chevron">↓</span>
+        </button>
+      </section>
+
+      <section className="ft-introduction" id="introduction" data-reveal>
+        <div className="ft-intro-symbol" aria-hidden="true">
+          <span>✳</span>
+        </div>
+        <div className="ft-intro-copy">
+          <SectionLabel>A HOME FOR YOUR HISTORY</SectionLabel>
+          <h2>
+            Your roots connect you.
+            <br />
+            Your stories bring you <span>closer.</span>
+          </h2>
+        </div>
+        <p className="ft-intro-description">
+          Family Tree Link brings your family connections, profiles, events and
+          memories into one organized space. Build your family tree at your own
+          pace and give the next generation a way to explore where they come
+          from.
+        </p>
+      </section>
+
+      <section className="ft-features-section" id="features">
+        <div className="ft-section-heading" data-reveal>
+          <SectionLabel>ONE FAMILY. MANY STORIES.</SectionLabel>
+          <h2>
+            Everything your family
+            <br />
+            story needs.
+          </h2>
+          <p>
+            Discover the tools that help you connect generations and keep
+            important memories together.
+          </p>
+        </div>
+
+        <div className="ft-feature-grid">
+          {features.map((feature, index) => (
+            <article
+              className={`ft-feature-card ${feature.className}`}
+              key={feature.number}
+              data-reveal
+              style={{ "--ft-delay": `${index * 85}ms` }}
+            >
+              <div className="ft-feature-card-top">
+                <span className="ft-feature-icon" aria-hidden="true">
+                  {feature.icon}
+                </span>
+                <span className="ft-feature-number">{feature.number}</span>
+              </div>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+              <button
+                className="ft-feature-link"
+                onClick={goToRegister}
+                aria-label={`Get started with ${feature.title}`}
+              >
+                Explore feature <ArrowIcon />
+              </button>
+              <span className="ft-feature-watermark" aria-hidden="true">
+                {feature.icon}
+              </span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="ft-tour-section" id="tour">
+        <div className="ft-tour-copy" data-reveal>
+          <SectionLabel>SEE THE CONNECTIONS</SectionLabel>
+          <h2>
+            More than names.
+            <br />
+            <span>A living family tree.</span>
+          </h2>
+          <p>
+            Picture your family history as a connected story. Understand
+            relationships at a glance, explore different generations and build a
+            clearer picture of the people who came before you.
+          </p>
+
+          <ul className="ft-check-list">
+            <li>
+              <span>✓</span>
+              Visual family relationships
+            </li>
+            <li>
+              <span>✓</span>
+              Dedicated member profiles
+            </li>
+            <li>
+              <span>✓</span>A central place for family memories
+            </li>
+          </ul>
+
+          <PrimaryButton onClick={goToRegister}>
+            Build your family tree
+          </PrimaryButton>
+        </div>
+
+        <div className="ft-dashboard-window" data-reveal>
+          <div className="ft-window-topbar">
+            <div className="ft-window-dots">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span className="ft-window-title">Family Tree Link</span>
+            <span className="ft-window-status">
+              <i /> Family preview
+            </span>
+          </div>
+
+          <div className="ft-window-body">
+            <aside className="ft-window-sidebar">
+              <div className="ft-sidebar-brand">✳</div>
+              <span className="sidebar-active">⌘</span>
+              <span>♧</span>
+              <span>◷</span>
+              <span>▧</span>
+            </aside>
+
+            <div className="ft-window-main">
+              <div className="ft-window-welcome">
+                <div>
+                  <span className="ft-preview-eyebrow">YOUR SPACE</span>
+                  <h3>Our family tree</h3>
+                  <p>A little history. A lot of heart.</p>
+                </div>
+                <div className="ft-window-avatar">F</div>
+              </div>
+
+              <div className="ft-window-stat-row">
+                <div className="ft-window-stat">
+                  <span className="stat-icon stat-icon-green">♧</span>
+                  <div>
+                    <span>Members</span>
+                    <strong>Connected</strong>
+                  </div>
+                </div>
+                <div className="ft-window-stat">
+                  <span className="stat-icon stat-icon-gold">✦</span>
+                  <div>
+                    <span>Family story</span>
+                    <strong>Growing</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ft-window-tree">
+                <div className="ft-window-tree-title">
+                  <strong>Generations together</strong>
+                  <span>Illustration</span>
+                </div>
+                <div className="ft-mini-tree">
+                  <div className="ft-mini-tree-row">
+                    <span className="mini-person mini-gold">G</span>
+                  </div>
+                  <div className="ft-mini-tree-branch" />
+                  <div className="ft-mini-tree-row">
+                    <span className="mini-person mini-green">F</span>
+                    <span className="mini-person mini-pink">M</span>
+                  </div>
+                  <div className="ft-mini-tree-branch mini-branch-bottom" />
+                  <div className="ft-mini-tree-row">
+                    <span className="mini-person mini-blue">Y</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="ft-window-caption">
+            <span>✦</span> A visual preview of a connected family experience
+          </div>
+        </div>
+      </section>
+
+      <section className="ft-memory-section" data-reveal>
+        <div className="ft-memory-copy">
+          <SectionLabel>KEEP THE MOMENTS CLOSE</SectionLabel>
+          <h2>
+            From your oldest
+            <br />
+            stories to <span>today.</span>
+          </h2>
+          <p>
+            The smallest moments often become the stories we treasure most.
+            Bring important family milestones and meaningful photographs
+            together in one place.
+          </p>
+          <button
+            className="ft-secondary-button ft-secondary-outline"
+            onClick={goToRegister}
+          >
+            Make room for memories <ArrowIcon diagonal />
+          </button>
+        </div>
+
+        <div className="ft-memory-previews">
+          <TimelinePreview />
+          <GalleryPreview />
+        </div>
+      </section>
+
+      <section className="ft-journey-section" id="journey">
+        <div className="ft-section-heading" data-reveal>
+          <SectionLabel>YOUR STORY STARTS HERE</SectionLabel>
+          <h2>
+            Four simple steps.
+            <br />
+            <span>Generations of meaning.</span>
+          </h2>
+          <p>
+            Start small, add what you know and let your family history grow
+            naturally over time.
+          </p>
+        </div>
+
+        <div className="ft-journey-grid">
+          {steps.map((step, index) => (
+            <article
+              className="ft-journey-step"
+              key={step.number}
+              data-reveal
+              style={{ "--ft-delay": `${index * 100}ms` }}
+            >
+              <div className="ft-journey-number">
+                <span>{step.number}</span>
+                {index < steps.length - 1 && (
+                  <span className="ft-journey-line" aria-hidden="true" />
+                )}
+              </div>
+              <h3>{step.title}</h3>
+              <p>{step.description}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="ft-journey-cta" data-reveal>
+          <div className="ft-journey-cta-symbol" aria-hidden="true">
+            ✳
+          </div>
+          <div>
+            <strong>Your family story can start today.</strong>
+            <span>Every connection is a new chapter.</span>
+          </div>
+          <PrimaryButton onClick={goToRegister}>
+            Begin your journey
+          </PrimaryButton>
+        </div>
+      </section>
+
+      <section className="ft-purpose-section" id="about" data-reveal>
+        <div className="ft-purpose-art" aria-hidden="true">
+          <div className="ft-purpose-hex ft-purpose-hex-one">♡</div>
+          <div className="ft-purpose-hex ft-purpose-hex-two">✦</div>
+          <div className="ft-purpose-hex ft-purpose-hex-three">✿</div>
+          <div className="ft-purpose-center">Family</div>
+        </div>
+
+        <div className="ft-purpose-copy">
+          <SectionLabel>BUILT AROUND WHAT MATTERS</SectionLabel>
+          <h2>
+            Because family
+            <br />
+            is <span>worth remembering.</span>
+          </h2>
+          <p>
+            Family Tree Link is designed to help you organize the people,
+            relationships and memories that make your family unique. Build a
+            family space that can grow as your story continues.
+          </p>
+          <div className="ft-purpose-note">
+            <span>“</span>
+            <p>The best family stories are the ones we keep sharing.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="ft-final-cta" data-reveal>
+        <div
+          className="ft-cta-decoration ft-cta-decoration-one"
+          aria-hidden="true"
+        >
+          ⬡
+        </div>
+        <div
+          className="ft-cta-decoration ft-cta-decoration-two"
+          aria-hidden="true"
+        >
+          ✳
+        </div>
+        <div className="ft-cta-content">
+          <span className="ft-cta-eyebrow">
+            YOUR PEOPLE. YOUR HISTORY. YOUR LEGACY.
+          </span>
+          <h2>
+            Every family has a story.
+            <br />
+            <span>Let's connect yours.</span>
+          </h2>
+          <p>
+            Create your family space and start bringing generations closer, one
+            connection at a time.
+          </p>
+          <PrimaryButton onClick={goToRegister}>
+            Create your family tree
+          </PrimaryButton>
+          <span className="ft-cta-footnote">
+            Already a member?{" "}
+            <button onClick={goToLogin}>Log in to your account</button>
+          </span>
+        </div>
+      </section>
+
+      <footer className="ft-footer">
+        <button
+          className="ft-brand ft-footer-brand"
+          onClick={() => goToSection("home")}
+        >
+          <span className="ft-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <path
+                d="M20 5 32 12v14L20 33 8 26V12L20 5Z"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              />
+              <path
+                d="M20 12v9m0-5-6-4m6 4 6-4M20 21l-6 4m6-4 6 4"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+              <circle cx="20" cy="11" r="2.4" fill="currentColor" />
+              <circle cx="13" cy="12" r="2.4" fill="currentColor" />
+              <circle cx="27" cy="12" r="2.4" fill="currentColor" />
+              <circle cx="20" cy="22" r="2.4" fill="currentColor" />
+              <circle cx="13" cy="26" r="2.4" fill="currentColor" />
+              <circle cx="27" cy="26" r="2.4" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="ft-brand-name">
+            Family Tree<span>Link</span>
+          </span>
+        </button>
+
+        <p>Connecting generations, preserving stories.</p>
+
+        <div className="ft-footer-links">
+          <button onClick={() => goToSection("features")}>Features</button>
+          <button onClick={goToLogin}>Log in</button>
+          <button onClick={goToRegister}>Get started</button>
+        </div>
+
+        <div className="ft-footer-bottom">
+          <span>© {new Date().getFullYear()} Family Tree Link</span>
+          <span>
+            Made for the stories that connect us.{" "}
+            <span className="ft-footer-heart">♡</span>
+          </span>
+        </div>
+      </footer>
+    </main>
+  );
+}
