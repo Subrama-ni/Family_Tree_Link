@@ -562,9 +562,11 @@ a {
 
 .ft-hero-art-backdrop {
   position: absolute;
+  z-index: 0;
   inset: 0;
-  overflow: hidden;
-  border-radius: 48% 52% 46% 54%;
+  overflow: visible;
+  border-radius: 0;
+  pointer-events: none;
   background:
     radial-gradient(
       ellipse at 50% 48%,
@@ -580,48 +582,73 @@ a {
 
 .ft-honeycomb {
   position: absolute;
-  width: 62px;
-  height: 69px;
-  border: 1px solid rgba(103, 140, 100, 0.19);
-  background: rgba(255, 255, 255, 0.24);
-  clip-path: polygon(50% 0, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  z-index: 0;
+  display: block;
+  width: 68px;
+  height: 76px;
+  pointer-events: none;
+  opacity: 1;
+  /* Build the outline from two hexagons; clip-path alone clips CSS borders. */
+  background: rgba(181, 138, 69, 0.82);
+  clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+  filter: drop-shadow(0 5px 8px rgba(153, 112, 43, 0.12));
   animation: ftFloat 5s ease-in-out infinite;
 }
 
+.ft-honeycomb::after {
+  position: absolute;
+  content: "";
+  inset: 2px;
+  background: rgba(250, 242, 222, 0.88);
+  clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+}
+
+.ft-honeycomb.honeycomb-b,
+.ft-honeycomb.honeycomb-d {
+  background: rgba(164, 119, 42, 0.9);
+}
+
+.ft-honeycomb.honeycomb-b::after,
+.ft-honeycomb.honeycomb-d::after {
+  background: rgba(248, 235, 205, 0.92);
+}
 .honeycomb-a {
-  top: 7%;
-  left: 16%;
+  top: 3%;
+  left: -3%;
+  width: 72px;
+  height: 80px;
+  transform: rotate(8deg);
 }
 
 .honeycomb-b {
-  top: 19%;
-  right: 4%;
-  width: 43px;
-  height: 49px;
+  top: 18%;
+  right: -3%;
+  width: 52px;
+  height: 59px;
   animation-delay: -1.6s;
 }
 
 .honeycomb-c {
-  bottom: 8%;
-  left: 10%;
-  width: 45px;
-  height: 51px;
+  bottom: 4%;
+  left: -4%;
+  width: 54px;
+  height: 61px;
   animation-delay: -2.2s;
 }
 
 .honeycomb-d {
-  right: 12%;
-  bottom: 11%;
-  width: 65px;
-  height: 73px;
+  right: -2%;
+  bottom: 4%;
+  width: 74px;
+  height: 83px;
   animation-delay: -0.8s;
 }
 
 .honeycomb-e {
-  top: 2%;
-  right: 32%;
-  width: 31px;
-  height: 36px;
+  top: 1%;
+  right: 29%;
+  width: 40px;
+  height: 45px;
   animation-delay: -2.8s;
 }
 
