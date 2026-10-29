@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function GalleryPage() {
-  const API_URL = "";
+  const API_URL = (
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+  ).replace(/\/+$/, "");
 
   const [members, setMembers] = useState([]);
   const [photos, setPhotos] = useState([]);

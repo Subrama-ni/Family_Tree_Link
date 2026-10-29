@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_URL = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"
+).replace(/\/+$/, "");
+
 function TimelinePage() {
   const [events, setEvents] = useState([]);
   const [members, setMembers] = useState([]);
@@ -23,9 +27,11 @@ function TimelinePage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await axios.get("/api/events");
+      const response = await axios.get(`${API_URL}/api/events`);
 
-      const sorted = response.data.sort(
+      const data = Array.isArray(response.data) ? response.data : [];
+
+      const sorted = [...data].sort(
         (a, b) => new Date(b.eventDate) - new Date(a.eventDate),
       );
 
@@ -37,9 +43,9 @@ function TimelinePage() {
 
   const fetchMembers = async () => {
     try {
-      const response = await axios.get("/api/members");
+      const response = await axios.get(`${API_URL}/api/members`);
 
-      setMembers(response.data);
+      setMembers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.log(error);
     }
@@ -54,7 +60,7 @@ function TimelinePage() {
 
   const addEvent = async () => {
     try {
-      await axios.post("/api/events", {
+      await axios.post(`${API_URL}/api/events`, {
         title: formData.title,
         description: formData.description,
         eventDate: formData.eventDate,
@@ -80,7 +86,7 @@ function TimelinePage() {
   const updateEvent = async () => {
     try {
       await axios.put(
-        `/api/events/${editingId}`,
+        `${API_URL}/api/events/${editingId}`,
 
         {
           title: formData.title,
@@ -119,7 +125,7 @@ function TimelinePage() {
     }
 
     try {
-      await axios.delete(`/api/events/${id}`);
+      await axios.delete(`${API_URL}/api/events/${id}`);
 
       fetchEvents();
     } catch (error) {
