@@ -41,7 +41,6 @@ public class JwtService {
         return signingKey;
     }
 
-    // Generate JWT
     public String generateToken(User user) {
 
         Date now = new Date();
@@ -70,7 +69,6 @@ public class JwtService {
                 .compact();
     }
 
-    // Parse and verify JWT
     private Claims extractClaims(String token) {
 
         return Jwts.parser()
@@ -106,41 +104,41 @@ public class JwtService {
         return ((Number) familyId).longValue();
     }
 
-    // Validate token against the current database user
+    /**
+     * Validate authentication independently of family membership.
+     * Family access must be checked by the relevant service methods.
+     */
     public boolean isTokenValid(String token, User user) {
 
         try {
-            Claims claims = extractClaims(token);
-
             if (user == null
                     || user.getEmail() == null
-                    || !user.getEmail().equals(claims.getSubject())) {
+                    || user.getId() == null) {
                 return false;
             }
 
-            Long tokenUserId = extractUserId(token);
+            // Parsing verifies the signature and expiration.
+            Claims claims = extractClaims(token);
 
-            if (tokenUserId == null
-                    || user.getId() == null
-                    || !tokenUserId.equals(user.getId())) {
+            if (claims.getSubject() == null
+                    || !user.getEmail().equalsIgnoreCase(
+                            claims.getSubject())) {
                 return false;
             }
 
-            Long tokenFamilyId = extractFamilyId(token);
+            Object claimUserId = claims.get("userId");
 
-            Long currentFamilyId =
-                    user.getFamily() != null
-                            ? user.getFamily().getId()
-                            : null;
+            if (!(claimUserId instanceof Number)) {
+                return false;
+            }
 
-            // Reject tokens when family membership has changed.
-            // Both family IDs must match, including null values.
-            return java.util.Objects.equals(
-                    tokenFamilyId,
-                    currentFamilyId
-            );
+            Long tokenUserId =
+                    ((Number) claimUserId).longValue();
+
+            return tokenUserId.equals(user.getId());
 
         } catch (Exception e) {
+            // Invalid signature, malformed token or expired token.
             return false;
         }
     }
